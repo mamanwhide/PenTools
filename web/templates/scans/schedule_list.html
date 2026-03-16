@@ -1,0 +1,83 @@
+{% extends "base/base.html" %}
+
+{% block title %}Scheduled Scans — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-white">Scheduled Scans</h1>
+    <a href="{% url 'modules:list' %}"
+       class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors">
+      + New Schedule
+    </a>
+  </div>
+
+  <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    {% if schedules %}
+    <table class="w-full text-sm">
+      <thead class="border-b border-surface-border">
+        <tr class="text-gray-400 text-xs uppercase">
+          <th class="px-4 py-3 text-left">Name</th>
+          <th class="px-4 py-3 text-left">Module</th>
+          <th class="px-4 py-3 text-left">Schedule</th>
+          <th class="px-4 py-3 text-left">Last Run</th>
+          <th class="px-4 py-3 text-left">Runs</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-border">
+        {% for s in schedules %}
+        <tr class="hover:bg-surface-hover transition-colors">
+          <td class="px-4 py-3 font-medium text-white">{{ s.name }}</td>
+          <td class="px-4 py-3 font-mono text-accent-light text-xs">{{ s.module_id }}</td>
+          <td class="px-4 py-3 text-gray-300">{{ s.get_schedule_display }}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs">
+            {% if s.last_run_at %}{{ s.last_run_at|date:"Y-m-d H:i" }}{% else %}Never{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-400">{{ s.run_count }}</td>
+          <td class="px-4 py-3">
+            {% if s.is_active %}
+              <span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">Active</span>
+            {% else %}
+              <span class="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">Paused</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 flex gap-2">
+            <button onclick="toggleSchedule('{{ s.id }}')"
+                    class="px-2 py-1 text-xs rounded border border-surface-border text-gray-400 hover:text-white transition-colors">
+              {% if s.is_active %}Pause{% else %}Resume{% endif %}
+            </button>
+            <button onclick="deleteSchedule('{{ s.id }}')"
+                    class="px-2 py-1 text-xs rounded border border-red-800 text-red-400 hover:text-white transition-colors">
+              Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-16 text-gray-500">
+      <p class="text-lg mb-2">No scheduled scans</p>
+      <p class="text-sm">Go to Modules to create a scheduled scan for any module.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function getCsrf() {
+  return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+}
+async function toggleSchedule(id) {
+  const r = await fetch(`/scans/schedules/${id}/toggle/`, {method:'POST', headers:{'X-CSRFToken':getCsrf()}});
+  if (r.ok) location.reload();
+}
+async function deleteSchedule(id) {
+  if (!confirm('Delete this scheduled scan?')) return;
+  const r = await fetch(`/scans/schedules/${id}/delete/`, {method:'POST', headers:{'X-CSRFToken':getCsrf()}});
+  if (r.ok) location.reload();
+}
+</script>
+{% endblock %}

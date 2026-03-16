@@ -1,0 +1,92 @@
+{% extends "base/base.html" %}
+
+{% block title %}Scan Chains — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-white">Scan Chains</h1>
+      <p class="text-gray-400 text-sm mt-1">Automatically trigger downstream scans when a module completes.</p>
+    </div>
+    <a href="{% url 'scans:chain_create' %}"
+       class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors">
+      + New Chain
+    </a>
+  </div>
+
+  <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    {% if chains %}
+    <table class="w-full text-sm">
+      <thead class="border-b border-surface-border">
+        <tr class="text-gray-400 text-xs uppercase">
+          <th class="px-4 py-3 text-left">Name</th>
+          <th class="px-4 py-3 text-left">Parent → Child</th>
+          <th class="px-4 py-3 text-left">Trigger</th>
+          <th class="px-4 py-3 text-left">Expand Mode</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-border">
+        {% for c in chains %}
+        <tr class="hover:bg-surface-hover transition-colors">
+          <td class="px-4 py-3 font-medium text-white">{{ c.name }}</td>
+          <td class="px-4 py-3 font-mono text-xs">
+            <span class="text-blue-400">{{ c.parent_module }}</span>
+            <span class="text-gray-500 mx-2">→</span>
+            <span class="text-accent-light">{{ c.child_module }}</span>
+          </td>
+          <td class="px-4 py-3 text-gray-400 text-xs">{{ c.get_trigger_on_display }}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs">
+            {% if c.param_mapping.expand %}
+              <span class="text-yellow-400">Expand list: {{ c.param_mapping.list_key }}</span>
+            {% else %}
+              Single
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            {% if c.is_active %}
+              <span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">Active</span>
+            {% else %}
+              <span class="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">Paused</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 flex gap-2">
+            <button onclick="toggleChain('{{ c.id }}')"
+                    class="px-2 py-1 text-xs rounded border border-surface-border text-gray-400 hover:text-white transition-colors">
+              {% if c.is_active %}Pause{% else %}Resume{% endif %}
+            </button>
+            <button onclick="deleteChain('{{ c.id }}')"
+                    class="px-2 py-1 text-xs rounded border border-red-800 text-red-400 hover:text-white transition-colors">
+              Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-16 text-gray-500">
+      <p class="text-lg mb-2">No scan chains configured</p>
+      <p class="text-sm">Example: R-02 (Subdomain Enum) → V-01 (Nuclei CVE) on each discovered HTTP host.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function getCsrf() {
+  return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+}
+async function toggleChain(id) {
+  const r = await fetch(`/scans/chains/${id}/toggle/`, {method:'POST', headers:{'X-CSRFToken':getCsrf()}});
+  if (r.ok) location.reload();
+}
+async function deleteChain(id) {
+  if (!confirm('Delete this scan chain?')) return;
+  const r = await fetch(`/scans/chains/${id}/delete/`, {method:'POST', headers:{'X-CSRFToken':getCsrf()}});
+  if (r.ok) location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base/base.html" %}
+
+{% block title %}Modules — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <!-- Header + Search -->
+  <div class="flex items-center justify-between mb-6 gap-4">
+    <h1 class="text-2xl font-bold text-white shrink-0">Attack Modules</h1>
+    <form method="get" class="flex-1 max-w-sm">
+      <input type="text" name="q" value="{{ search_query }}"
+             placeholder="Search modules..."
+             class="w-full bg-surface-card border border-surface-border text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent" />
+    </form>
+  </div>
+
+  <div class="flex gap-6">
+    <!-- Category sidebar -->
+    <aside class="w-48 shrink-0">
+      <nav class="space-y-0.5">
+        <a href="{% url 'modules:list' %}"
+           class="block px-3 py-1.5 rounded-lg text-sm {% if not active_category %}text-white bg-accent/20{% else %}text-gray-400 hover:text-white hover:bg-surface-border{% endif %} transition-colors">
+          All ({{ total_modules }})
+        </a>
+        {% for cat in categories %}
+        <a href="?category={{ cat.slug }}"
+           class="flex items-center justify-between px-3 py-1.5 rounded-lg text-sm
+                  {% if active_category == cat.slug %}text-white bg-accent/20{% else %}text-gray-400 hover:text-white hover:bg-surface-border{% endif %} transition-colors">
+          <span>{{ cat.label }}</span>
+          <span class="text-xs bg-surface-border px-1.5 rounded font-mono">{{ cat.count }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <!-- Module grid -->
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for module in modules %}
+      <div class="group bg-surface-card border border-surface-border hover:border-accent/40 rounded-xl p-4 transition-colors flex flex-col">
+        <a href="{% url 'modules:detail' module.id %}" class="flex-1 block">
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs text-accent">{{ module.id }}</span>
+              <span class="text-xs text-gray-600 uppercase">{{ module.category_label }}</span>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold
+                  {% if module.risk_level == 'critical' %}bg-red-900/40 text-red-400 border border-red-900
+                  {% elif module.risk_level == 'high' %}bg-orange-900/40 text-orange-400 border border-orange-900
+                  {% elif module.risk_level == 'medium' %}bg-yellow-900/40 text-yellow-400 border border-yellow-900
+                  {% else %}bg-blue-900/40 text-blue-400 border border-blue-900{% endif %}">
+              {{ module.risk_level }}
+            </span>
+          </div>
+          <h3 class="font-semibold text-white group-hover:text-accent transition-colors text-sm">{{ module.name }}</h3>
+          <p class="text-gray-500 text-xs mt-1 line-clamp-2">{{ module.description }}</p>
+          {% if module.tags %}
+          <div class="flex flex-wrap gap-1 mt-2">
+            {% for tag in module.tags|slice:":4" %}
+            <span class="text-xs bg-surface-border text-gray-500 px-1.5 py-0.5 rounded">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        <div class="mt-3 pt-3 border-t border-surface-border/50 flex items-center gap-2">
+          <a href="{% url 'scans:create' module.id %}"
+             class="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-accent/15 hover:bg-accent/25 text-accent border border-accent/30 rounded-lg text-xs font-semibold transition-colors">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+            </svg>
+            Launch
+          </a>
+          <a href="{% url 'modules:detail' module.id %}"
+             class="px-3 py-1.5 border border-surface-border hover:border-gray-500 text-gray-500 hover:text-gray-300 rounded-lg text-xs transition-colors">
+            Details
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-span-2 text-center py-16 text-gray-600">
+        <p>No modules found.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

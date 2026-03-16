@@ -1,0 +1,726 @@
+{% extends "base/base.html" %}
+{% block title %}Graph — {{ project.name }} — VulnX{% endblock %}
+
+{% block extra_head %}
+<!-- THREE must load before SpriteText and 3d-force-graph -->
+<script src="https://unpkg.com/three@0.163.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three-spritetext@1.9.0/dist/three-spritetext.min.js"></script>
+<script src="https://unpkg.com/force-graph@1.43.5/dist/force-graph.min.js"></script>
+<script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
+<style>
+html,body{margin:0;padding:0}
+#graph-mount{width:100%;height:100%;background:#080b14;display:block}
+#graph-mount canvas{display:block}
+main>.p-6{padding:0!important}
+#top-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;border-bottom:1px solid #1c1e2e;background:#0d0f18;flex-shrink:0;z-index:10;flex-wrap:wrap;min-height:44px}
+#graph-root{display:flex;flex-direction:column;overflow:hidden}
+#graph-body{display:flex;flex:1;overflow:hidden;min-height:0}
+#graph-wrap{flex:1;position:relative;overflow:hidden;min-width:0}
+#filter-sidebar{width:210px;flex-shrink:0;overflow-y:auto;padding:16px;background:#0d0f18;border-right:1px solid #1c1e2e}
+#detail-panel{width:300px;flex-shrink:0;overflow:hidden;display:none;flex-direction:column;background:#0d0f18;border-left:1px solid #1c1e2e}
+#detail-panel.open{display:flex}
+#ctx-menu{position:fixed;z-index:9999;min-width:172px;background:#0f1016;border:1px solid #1c1e2e;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);padding:4px 0;font-size:12px;display:none}
+#ctx-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 14px;color:#9ca3af;background:none;border:none;cursor:pointer;text-align:left;transition:background .12s,color .12s}
+#ctx-menu button:hover{background:#1c2130;color:#fff}
+.sev-critical{background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.3)}
+.sev-high{background:rgba(249,115,22,.15);color:#f97316;border-color:rgba(249,115,22,.3)}
+.sev-medium{background:rgba(234,179,8,.15);color:#eab308;border-color:rgba(234,179,8,.3)}
+.sev-low{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.3)}
+.sev-info{background:rgba(100,116,139,.15);color:#94a3b8;border-color:rgba(100,116,139,.3)}
+.tag-btn{padding:3px 10px;font-size:11px;border-radius:6px;border:1px solid #1c1e2e;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.tag-btn.active{background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,.5)}
+.tag-btn:not(.active){background:transparent;color:#4b5563;border-color:#1c1e2e}
+.tag-btn:not(.active):hover{color:#9ca3af;border-color:#374151}
+.dp-scan-link:hover{color:#a5b4fc!important}
+.dp-run-mod-link:hover{background:#6d28d9!important}
+.icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid #1c1e2e;background:transparent;cursor:pointer;color:#4b5563;transition:color .15s,border-color .15s,background .15s}
+.icon-btn:hover{color:#e2e8f0;border-color:#374151}
+.icon-btn.active{color:#a78bfa;border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.12)}
+.mode-pill{display:flex;align-items:center;background:#12141e;border:1px solid #1c1e2e;border-radius:8px;padding:2px;gap:2px}
+.mode-btn{padding:4px 12px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:background .15s,color .15s}
+.mode-btn.active{background:#7c3aed;color:#fff}
+.mode-btn:not(.active){background:transparent;color:#4b5563}
+.mode-btn:not(.active):hover{color:#9ca3af}
+.filter-label{font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.filter-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
+.filter-row input[type=checkbox]{width:12px;height:12px;accent-color:#7c3aed;flex-shrink:0}
+.filter-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.filter-row .sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.filter-row .lbl{font-size:12px;color:#6b7280;flex:1}
+.filter-row .cnt{font-size:10px;font-family:monospace;color:#374151}
+.stat-pill{font-size:10px;font-family:monospace;border:1px solid #1c1e2e;color:#4b5563;padding:2px 8px;border-radius:4px}
+.zoom-ctrl{display:flex;flex-direction:column;gap:6px;position:absolute;top:12px;right:12px;z-index:5}
+.zoom-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(13,15,24,.85);border:1px solid #1c1e2e;border-radius:7px;cursor:pointer;color:#6b7280;font-size:16px;line-height:1;transition:color .15s,border-color .15s}
+.zoom-btn:hover{color:#fff;border-color:#374151}
+#empty-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;color:#1f2937}
+#graph-legend{position:absolute;bottom:12px;left:12px;z-index:5;background:rgba(13,15,24,.9);border:1px solid #1c1e2e;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+#graph-legend .leg-row{display:flex;align-items:center;gap:6px;font-size:10px;color:#4b5563}
+.loading-overlay{position:absolute;inset:0;background:rgba(8,11,20,.85);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .8s linear infinite}
+
+/* ── Dark / Light mode vars ──────────────────────────────── */
+:root{ --graph-bg:#080b14; --ui-bg:#0d0f18; --panel-bg:#0f1016; --border:#1c1e2e; --text-muted:#4b5563; --text-main:#e2e8f0; }
+.theme-light{ --graph-bg:#f1f5f9; --ui-bg:#f8fafc; --panel-bg:#ffffff; --border:#e2e8f0; --text-muted:#9ca3af; --text-main:#111827; }
+
+#graph-root            { background:var(--graph-bg); }
+#top-bar               { background:var(--ui-bg); border-color:var(--border); }
+#filter-sidebar        { background:var(--ui-bg); border-color:var(--border); }
+#detail-panel          { background:var(--panel-bg); }
+#graph-legend          { background:rgba(0,0,0,.45); }
+.theme-light #graph-legend { background:rgba(248,250,252,.92); }
+#graph-mount           { background:var(--graph-bg); }
+#ctx-menu              { background:var(--panel-bg); border-color:var(--border); }
+#ctx-menu button       { color:var(--text-muted); }
+#ctx-menu button:hover { background:var(--border); color:var(--text-main); }
+.stat-pill             { border-color:var(--border); color:var(--text-muted); }
+.filter-label          { color:var(--text-muted); }
+.filter-row .lbl       { color:var(--text-muted); }
+.icon-btn              { border-color:var(--border); color:var(--text-muted); }
+.icon-btn:hover        { color:var(--text-main); }
+.mode-btn:not(.active) { color:var(--text-muted); }
+.mode-pill             { border-color:var(--border); background:var(--ui-bg); }
+
+/* theme toggle button */
+#btn-theme { width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text-muted);transition:color .15s,border-color .15s; }
+#btn-theme:hover{ color:var(--text-main); border-color:#374151; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="graph-root" style="height:calc(100vh - 44px)">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <a href="{% url 'targets:project_detail' project.pk %}" id="back-link" style="display:flex;align-items:center;gap:4px;color:#4b5563;font-size:12px;text-decoration:none;flex-shrink:0" onmouseover="this.style.color='#9ca3af'" onmouseout="this.style.color='#4b5563'">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      <span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ project.name }}</span>
+    </a>
+    <span style="color:#1f2937;font-size:12px">/</span>
+    <span style="font-size:12px;font-weight:600;color:#e2e8f0">Attack Graph</span>
+    <span class="stat-pill" id="stats-pill">Loading&hellip;</span>
+
+    <div style="flex:1"></div>
+
+    <div class="mode-pill">
+      <button class="mode-btn" id="btn-2d" onclick="APP.setMode('2d')">2D</button>
+      <button class="mode-btn active" id="btn-3d" onclick="APP.setMode('3d')">3D</button>
+    </div>
+
+    <button class="icon-btn active" id="btn-labels" title="Toggle labels" onclick="APP.toggleLabels()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
+    </button>
+
+    <!-- dark / light theme toggle -->
+    <button id="btn-theme" title="Toggle dark / light mode" onclick="APP.toggleTheme()">
+      <svg id="icon-sun" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg id="icon-moon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
+
+    <button class="icon-btn" id="btn-filter" title="Filters" onclick="APP.toggleSidebar()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+    </button>
+
+    <div style="position:relative">
+      <svg width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:8px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="search-input" type="text" placeholder="Search&hellip;" oninput="APP.onSearch(this.value)" style="width:140px;background:#12141e;border:1px solid #1c1e2e;color:#d1d5db;border-radius:8px;padding:5px 10px 5px 26px;font-size:11px;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#1c1e2e'">
+    </div>
+
+    <div style="position:relative" id="export-wrap">
+      <button class="tag-btn" onclick="document.getElementById('export-dd').style.display=document.getElementById('export-dd').style.display==='block'?'none':'block'">Export &#9662;</button>
+      <div id="export-dd" style="display:none;position:absolute;right:0;top:calc(100% + 4px);width:160px;background:#0d0f18;border:1px solid #1c1e2e;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:100;padding:4px 0">
+        <button onclick="APP.exportPNG();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export as PNG</button>
+        <button onclick="APP.exportJSON();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export JSON</button>
+        <button onclick="APP.exportCSV();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export CSV</button>
+      </div>
+    </div>
+
+    <button class="icon-btn" id="btn-reload" title="Reload" onclick="APP.reload()">
+      <svg id="reload-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </button>
+
+    <div style="display:flex;align-items:center;gap:5px">
+      <span id="ws-dot" style="width:6px;height:6px;border-radius:50%;background:#374151;flex-shrink:0"></span>
+      <span id="ws-txt" style="font-size:10px;font-family:monospace;color:#374151">offline</span>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div id="graph-body">
+
+    <!-- FILTER SIDEBAR -->
+    <div id="filter-sidebar" style="display:none">
+      <div class="filter-label">Node Type</div>
+      <label class="filter-row"><input type="checkbox" id="ft-project" checked onchange="APP.filterChange()"><span class="sq" style="background:#7c3aed"></span><span class="lbl">Project</span><span class="cnt" id="cnt-project">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="ft-target" checked onchange="APP.filterChange()"><span class="sq" style="background:#3b82f6"></span><span class="lbl">Targets</span><span class="cnt" id="cnt-target">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="ft-module_run" checked onchange="APP.filterChange()"><span class="dot" style="background:#a78bfa"></span><span class="lbl">Module Runs</span><span class="cnt" id="cnt-module_run">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="ft-finding" checked onchange="APP.filterChange()"><span class="dot" style="background:#ef4444"></span><span class="lbl">Findings</span><span class="cnt" id="cnt-finding">0</span></label>
+
+      <div style="border-top:1px solid #1c1e2e;margin:12px 0"></div>
+      <div class="filter-label">Severity</div>
+      <label class="filter-row"><input type="checkbox" id="fs-critical" checked onchange="APP.filterChange()"><span class="dot" style="background:#ef4444"></span><span class="lbl">Critical</span><span class="cnt" id="cnt-sev-critical">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="fs-high" checked onchange="APP.filterChange()"><span class="dot" style="background:#f97316"></span><span class="lbl">High</span><span class="cnt" id="cnt-sev-high">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="fs-medium" checked onchange="APP.filterChange()"><span class="dot" style="background:#eab308"></span><span class="lbl">Medium</span><span class="cnt" id="cnt-sev-medium">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="fs-low" checked onchange="APP.filterChange()"><span class="dot" style="background:#38bdf8"></span><span class="lbl">Low</span><span class="cnt" id="cnt-sev-low">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="fs-info" checked onchange="APP.filterChange()"><span class="dot" style="background:#64748b"></span><span class="lbl">Info</span><span class="cnt" id="cnt-sev-info">0</span></label>
+
+      <div style="border-top:1px solid #1c1e2e;margin:12px 0"></div>
+      <button onclick="APP.resetFilters()" style="width:100%;padding:7px;font-size:11px;border:1px solid #1c1e2e;border-radius:8px;background:none;color:#6b7280;cursor:pointer" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Reset filters</button>
+    </div>
+
+    <!-- GRAPH CANVAS AREA -->
+    <div id="graph-wrap">
+      <div id="graph-mount"></div>
+
+      <!-- loading overlay -->
+      <div class="loading-overlay" id="loading-overlay">
+        <svg width="32" height="32" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24" class="spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span style="font-size:12px;color:#4b5563">Building graph&hellip;</span>
+      </div>
+
+      <!-- empty state -->
+      <div id="empty-state" style="display:none">
+        <svg width="56" height="56" fill="none" stroke="#1f2937" stroke-width="1.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+        <p style="font-size:13px;color:#374151;margin:10px 0 4px">No graph data yet</p>
+        <p style="font-size:11px;color:#1f2937">Run modules in this project to populate the graph.</p>
+      </div>
+
+      <!-- 2D zoom controls -->
+      <div class="zoom-ctrl" id="zoom-ctrl-2d" style="display:none">
+        <button class="zoom-btn" onclick="APP.zoomIn()" title="Zoom in">+</button>
+        <button class="zoom-btn" onclick="APP.zoomOut()" title="Zoom out">&minus;</button>
+        <button class="zoom-btn" onclick="APP.fit()" title="Fit">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+        </button>
+      </div>
+
+      <!-- legend -->
+      <div id="graph-legend">
+        <div class="leg-row"><span class="sq" style="background:#7c3aed;width:8px;height:8px;border-radius:2px;flex-shrink:0"></span>Project root</div>
+        <div class="leg-row"><span class="sq" style="background:#3b82f6;width:8px;height:8px;border-radius:2px;flex-shrink:0"></span>Target</div>
+        <div class="leg-row"><span class="dot" style="background:#a78bfa;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>Module run</div>
+        <div class="leg-row"><span class="dot" style="background:#ef4444;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>Finding</div>
+        <div id="legend-3d-hint" style="border-top:1px solid #1c1e2e;margin-top:5px;padding-top:5px;display:flex;flex-direction:column;gap:3px">
+          <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#9670;</span>critical</div>
+          <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#9830;</span>high</div>
+          <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#8857;</span>medium</div>
+          <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#9646;</span>low</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div id="detail-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1c1e2e;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="dp-color" style="width:10px;height:10px;border-radius:2px;background:#64748b;flex-shrink:0"></span>
+          <span id="dp-type" style="font-size:12px;font-weight:600;color:#e2e8f0">Node</span>
+        </div>
+        <button onclick="APP.closeDetail()" style="background:none;border:none;cursor:pointer;color:#374151;display:flex;align-items:center" onmouseover="this.style.color='#9ca3af'" onmouseout="this.style.color='#374151'">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="dp-body" style="flex:1;overflow-y:auto;padding:16px;font-size:12px;display:flex;flex-direction:column;gap:12px"></div>
+
+      <div style="border-top:1px solid #1c1e2e;padding:10px 14px;display:flex;gap:8px;flex-shrink:0">
+        <button id="dp-copy" onclick="APP.copyNode()" style="flex:1;padding:7px;font-size:11px;border:1px solid #1c1e2e;border-radius:8px;background:none;color:#6b7280;cursor:pointer;transition:color .15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Copy Value</button>
+        <button id="dp-confirm" onclick="APP.quickConfirm()" style="display:none;flex:1;padding:7px;font-size:11px;border:1px solid rgba(34,197,94,.3);border-radius:8px;background:none;color:#4ade80;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background='none'">Confirm</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Context menu -->
+<div id="ctx-menu">
+  <button data-action="run-module" style="white-space:nowrap">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/></svg>
+    Run Module
+  </button>
+  <button data-action="confirm">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Confirm Finding
+  </button>
+  <button data-action="copy">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+    Copy Value
+  </button>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+'use strict';
+
+const PROJECT_ID = "{{ project_id }}";
+const GRAPH_API  = "/api/v1/graph/{{ project_id }}/";
+const FIND_API   = "/api/v1/graph/{{ project_id }}/finding/";
+const CSV_URL    = "/api/v1/graph/{{ project_id }}/findings/csv/";
+const JSON_URL   = "/api/v1/graph/{{ project_id }}/export/";
+const WS_URL     = (location.protocol==="https:"?"wss":"ws")+"://"+location.host+"/ws/graph/{{ project_id }}/";
+const CSRF       = "{{ csrf_token }}";
+
+// Colour constants
+const SEV_COLOR  = {critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#38bdf8",info:"#64748b"};
+const TYPE_COLOR = {project:"#7c3aed",target:"#3b82f6",module_run:"#a78bfa"};
+const TYPE_ABBR  = {project:"P",target:"T",module_run:"M",finding:"F"};
+
+function nColor(n){ return n.node_type==="finding"?(SEV_COLOR[n.severity]||"#64748b"):(TYPE_COLOR[n.node_type]||"#64748b"); }
+function nSize(n){
+  if(n.node_type==="project")    return 11;
+  if(n.node_type==="target")     return 8;
+  if(n.node_type==="module_run") return 6;
+  return {critical:8,high:7,medium:6,low:5,info:4}[n.severity]||5;
+}
+
+// State
+let mode="3d", fg2=null, fg3=null, rawData={nodes:[],links:[]};
+let showLabels=true, showSidebar=false, selNode=null, searchQuery="";
+let ws=null, graphTheme="dark";
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window.APP = {
+  async init(){ await loadData(); connectWS(); initCtxMenu(); },
+
+  setMode(m){
+    if(mode===m) return;
+    mode=m;
+    document.getElementById("btn-2d").classList.toggle("active",m==="2d");
+    document.getElementById("btn-3d").classList.toggle("active",m==="3d");
+    document.getElementById("zoom-ctrl-2d").style.display=m==="2d"?"flex":"none";
+    document.getElementById("legend-3d-hint").style.display=m==="3d"?"flex":"none";
+    destroyGraphs();
+    renderGraph();
+  },
+
+  toggleLabels(){
+    showLabels=!showLabels;
+    document.getElementById("btn-labels").classList.toggle("active",showLabels);
+    renderGraph();
+  },
+
+  toggleSidebar(){
+    showSidebar=!showSidebar;
+    document.getElementById("filter-sidebar").style.display=showSidebar?"block":"none";
+    document.getElementById("btn-filter").classList.toggle("active",showSidebar);
+    setTimeout(()=>renderGraph(),50);
+  },
+
+  filterChange(){ renderGraph(); },
+
+  resetFilters(){
+    document.querySelectorAll("#filter-sidebar input[type=checkbox]").forEach(cb=>cb.checked=true);
+    renderGraph();
+  },
+
+  onSearch(v){ searchQuery=v.toLowerCase().trim(); renderGraph(); },
+
+  reload(){ const ic=document.getElementById("reload-icon"); ic.classList.add("spin"); loadData().finally(()=>ic.classList.remove("spin")); },
+
+  toggleTheme(){
+    graphTheme = graphTheme==="dark" ? "light" : "dark";
+    const root=document.getElementById("graph-root");
+    root.classList.toggle("theme-light", graphTheme==="light");
+    document.getElementById("icon-sun").style.display  = graphTheme==="light" ? "block" : "none";
+    document.getElementById("icon-moon").style.display = graphTheme==="dark"  ? "block" : "none";
+    renderGraph();
+  },
+
+  zoomIn()  { fg2&&fg2.zoom(fg2.zoom()*1.3,250); },
+  zoomOut() { fg2&&fg2.zoom(fg2.zoom()*0.77,250); },
+  fit()     { fg2&&fg2.zoomToFit(400,40); },
+
+  exportPNG(){
+    const c=document.querySelector("#graph-mount canvas");
+    if(!c) return;
+    const a=document.createElement("a"); a.href=c.toDataURL("image/png");
+    a.download="vulnx-graph-"+PROJECT_ID.slice(0,8)+".png"; a.click();
+  },
+  exportJSON(){ location.href=JSON_URL; },
+  exportCSV(){  location.href=CSV_URL;  },
+
+  closeDetail(){ selNode=null; document.getElementById("detail-panel").classList.remove("open"); },
+
+  copyNode(){
+    if(!selNode) return;
+    navigator.clipboard.writeText(selNode.value||selNode.url||selNode.label||"").catch(()=>{});
+  },
+
+  quickConfirm(){
+    if(!selNode) return;
+    saveFinding("status","confirmed");
+    const s=document.querySelector("#dp-body select[name=status]");
+    if(s) s.value="confirmed";
+  },
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────
+async function loadData(){
+  showLoading(true);
+  try{
+    const r=await fetch(GRAPH_API); const d=await r.json();
+    rawData=transform(d); updateCounts(); renderGraph();
+  }catch(e){ console.error("Graph load error",e); }
+  finally{ showLoading(false); }
+}
+
+function transform(d){
+  const nodes=(d.nodes||[]).map(n=>Object.assign({},n.data));
+  const links=(d.edges||[]).map(e=>Object.assign({source:e.data.source,target:e.data.target},e.data));
+  return {nodes,links};
+}
+
+function getFiltered(){
+  const atypes=["project","target","module_run","finding"].filter(t=>cbVal("ft-"+t));
+  const asevs=["critical","high","medium","low","info"].filter(s=>cbVal("fs-"+s));
+  const nodes=rawData.nodes.filter(n=>{
+    if(!atypes.includes(n.node_type)) return false;
+    if(n.node_type==="finding"&&!asevs.includes(n.severity)) return false;
+    if(searchQuery){
+      const h=((n.label||"")+(n.value||"")+(n.url||"")).toLowerCase();
+      if(!h.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+  const ids=new Set(nodes.map(n=>n.id));
+  const links=rawData.links.filter(l=>{
+    const s=l.source&&l.source.id?l.source.id:l.source;
+    const t=l.target&&l.target.id?l.target.id:l.target;
+    return ids.has(s)&&ids.has(t);
+  });
+  return {nodes,links};
+}
+
+function cbVal(id){ const el=document.getElementById(id); return el?el.checked:true; }
+
+function updateCounts(){
+  const nc={},sc={};
+  rawData.nodes.forEach(n=>{
+    nc[n.node_type]=(nc[n.node_type]||0)+1;
+    if(n.node_type==="finding") sc[n.severity]=(sc[n.severity]||0)+1;
+  });
+  ["project","target","module_run","finding"].forEach(t=>{
+    const el=document.getElementById("cnt-"+t); if(el) el.textContent=nc[t]||0;
+  });
+  ["critical","high","medium","low","info"].forEach(s=>{
+    const el=document.getElementById("cnt-sev-"+s); if(el) el.textContent=sc[s]||0;
+  });
+  const total=rawData.nodes.length, links=rawData.links.length;
+  const crit=sc.critical||0, hi=sc.high||0;
+  document.getElementById("stats-pill").textContent=total+" nodes · "+links+" edges · "+crit+" crit · "+hi+" high";
+  const es=document.getElementById("empty-state");
+  if(es) es.style.display=total===0?"flex":"none";
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderGraph(){
+  const wrap=document.getElementById("graph-wrap");
+  const mount=document.getElementById("graph-mount");
+  if(!wrap||!mount) return;
+  const W=wrap.offsetWidth, H=wrap.offsetHeight;
+  const gd=getFiltered();
+  destroyGraphs();
+
+  if(mode==="2d"){
+    fg2=ForceGraph()(mount)
+      .width(W).height(H)
+      .backgroundColor(graphTheme==="light"?"#f1f5f9":"#080b14")
+      .graphData(gd)
+      .nodeId("id")
+      .nodeVal(n=>nSize(n)*nSize(n))
+      .nodeColor(n=>nColor(n))
+      .nodeLabel("")
+      .nodeCanvasObjectMode(()=>"after")
+      .nodeCanvasObject((n,ctx,sc)=>{
+        const isLight=graphTheme==="light";
+        const isSel=selNode&&selNode.id===n.id;
+        const nodeCol=nColor(n);
+        const r=nSize(n);
+        const abbr=TYPE_ABBR[n.node_type]||"?";
+        const fullName=n.label||n.value||"";
+        const name=fullName.length>22?fullName.slice(0,20)+"…":fullName;
+        const fs=Math.max(10/sc,2.4);
+        ctx.textAlign="center"; ctx.textBaseline="top";
+        if(showLabels && name){
+          // Pill background
+          ctx.font="bold "+fs+"px monospace";
+          const tw=ctx.measureText(name).width;
+          const pad=fs*0.45, brd=1.2/sc;
+          const bx=n.x-tw/2-pad, by=n.y+r+fs*0.3;
+          const bw=tw+pad*2, bh=fs+pad*2, rad=bh/3;
+          ctx.fillStyle=isLight?"rgba(255,255,255,0.92)":"rgba(8,11,20,0.88)";
+          ctx.beginPath();
+          ctx.moveTo(bx+rad,by); ctx.arcTo(bx+bw,by,bx+bw,by+bh,rad);
+          ctx.arcTo(bx+bw,by+bh,bx,by+bh,rad); ctx.arcTo(bx,by+bh,bx,by,rad);
+          ctx.arcTo(bx,by,bx+bw,by,rad); ctx.closePath(); ctx.fill();
+          // Coloured border
+          ctx.strokeStyle=nodeCol; ctx.lineWidth=brd; ctx.stroke();
+          // Label text
+          ctx.fillStyle=isSel?"#4ade80":isLight?"#111827":"#f1f5f9";
+          ctx.fillText(name,n.x,by+pad);
+          // Sub badge
+          const sub=n.node_type==="finding"?(n.severity||"info").toUpperCase():abbr;
+          const sfs=Math.max(fs*0.75,1.8);
+          ctx.font="700 "+sfs+"px monospace";
+          ctx.fillStyle=nodeCol; ctx.textBaseline="top";
+          ctx.fillText(sub,n.x,by+bh+sfs*0.15);
+        } else {
+          // Minimal badge (labels off)
+          const bsize=r*0.9;
+          ctx.fillStyle=isLight?"rgba(255,255,255,0.9)":"rgba(8,11,20,0.82)";
+          ctx.beginPath(); ctx.arc(n.x,n.y-r*0.65,bsize,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle=nodeCol; ctx.lineWidth=1/sc; ctx.stroke();
+          ctx.font="bold "+Math.max(8/sc,1.8)+"px monospace";
+          ctx.fillStyle=nodeCol; ctx.textBaseline="middle";
+          ctx.fillText(abbr,n.x,n.y-r*0.65);
+        }
+      })
+      .linkColor(l=>l.severity?(SEV_COLOR[l.severity]+(graphTheme==="light"?"cc":"88")):(graphTheme==="light"?"rgba(100,116,139,.5)":"rgba(148,163,184,.3)"))
+      .linkWidth(l=>l.edge_type==="found_at"?1.5:0.8)
+      .linkDirectionalParticles(l=>l.edge_type==="found_at"?3:0)
+      .linkDirectionalParticleWidth(1.5)
+      .linkDirectionalParticleColor(l=>SEV_COLOR[l.severity]||"#38bdf8")
+      .linkDirectionalArrowLength(4)
+      .linkDirectionalArrowRelPos(1)
+      .onNodeClick(n=>openDetail(n))
+      .onNodeRightClick((n,ev)=>{ev.preventDefault();selNode=n;showCtx(ev.clientX,ev.clientY);})
+      .onBackgroundClick(()=>APP.closeDetail());
+    fg2.d3Force("charge")&&fg2.d3Force("charge").strength(-130);
+    fg2.d3Force("link")&&fg2.d3Force("link").distance(90);
+  } else {
+    fg3=ForceGraph3D()(mount)
+      .width(W).height(H)
+      .backgroundColor(graphTheme==="light"?"#f1f5f9":"#080b14")
+      .graphData(gd)
+      .nodeId("id")
+      .nodeLabel("")
+      .nodeColor(n=>nColor(n))
+      .nodeOpacity(0.9)
+      .linkColor(l=>l.severity?(SEV_COLOR[l.severity]+(graphTheme==="light"?"cc":"99")):(graphTheme==="light"?"rgba(100,116,139,.55)":"rgba(148,163,184,.4)"))
+      .linkWidth(l=>l.edge_type==="found_at"?1.5:0.8)
+      .linkDirectionalParticles(l=>l.edge_type==="found_at"?4:0)
+      .linkDirectionalParticleWidth(1.8)
+      .linkDirectionalParticleColor(l=>SEV_COLOR[l.severity]||"#38bdf8")
+      .linkDirectionalArrowLength(5)
+      .linkDirectionalArrowRelPos(1)
+      .linkOpacity(0.6)
+      .nodeThreeObject(n=>buildThreeNode(n))
+      .nodeThreeObjectExtend(false)
+      .onNodeClick(n=>openDetail(n))
+      .onNodeRightClick((n,ev)=>{ev.preventDefault();selNode=n;showCtx(ev.clientX,ev.clientY);})
+      .onBackgroundClick(()=>APP.closeDetail());
+    fg3.d3Force("charge")&&fg3.d3Force("charge").strength(-160);
+    fg3.d3Force("link")&&fg3.d3Force("link").distance(110);
+  }
+}
+
+function destroyGraphs(){
+  if(fg2){ try{fg2._destructor&&fg2._destructor();}catch(e){} fg2=null; }
+  if(fg3){ try{fg3._destructor&&fg3._destructor();}catch(e){} fg3=null; }
+  const m=document.getElementById("graph-mount"); if(m) m.innerHTML="";
+}
+
+// ── Three.js node builder ─────────────────────────────────────────────────
+function buildThreeNode(n){
+  const T=window.THREE, ST=window.SpriteText;
+  if(!T) return;
+  const group=new T.Group();
+  const col=nColor(n), sz=nSize(n), c=parseInt(col.replace("#",""),16);
+  const isSel=selNode&&selNode.id===n.id;
+
+  // Selection ring
+  if(isSel){
+    const sm=new T.MeshBasicMaterial({color:0x4ade80,transparent:true,opacity:0.65,side:T.DoubleSide});
+    const sr=new T.Mesh(new T.RingGeometry(sz*1.45,sz*1.9,32),sm);
+    sr.lookAt(0,0,1); group.add(sr);
+  }
+
+  // Pulsing glow ring for critical/high
+  if(n.node_type==="finding"&&(n.severity==="critical"||n.severity==="high")){
+    const gm=new T.MeshBasicMaterial({color:c,transparent:true,opacity:0.25,side:T.DoubleSide});
+    const gr=new T.Mesh(new T.RingGeometry(sz*1.35,sz*2.3,32),gm);
+    gr.lookAt(0,0,1);
+    const spd=n.severity==="critical"?2.8:1.8, t0=performance.now();
+    (function pulse(){
+      if(!gr.parent) return;
+      const t=(performance.now()-t0)/1e3;
+      gm.opacity=Math.sin(t*spd)*0.18+0.18;
+      gr.scale.setScalar(Math.sin(t*spd)*0.1+1);
+      requestAnimationFrame(pulse);
+    })();
+    group.add(gr);
+  }
+
+  // Geometry by type/severity
+  let geo;
+  if     (n.node_type==="project")    geo=new T.IcosahedronGeometry(sz,0);
+  else if(n.node_type==="target")     geo=new T.OctahedronGeometry(sz);
+  else if(n.node_type==="module_run") geo=new T.BoxGeometry(sz*1.4,sz*1.4,sz*1.4);
+  else if(n.severity==="critical")    geo=new T.TetrahedronGeometry(sz*1.2);
+  else if(n.severity==="high")        geo=new T.OctahedronGeometry(sz*0.9);
+  else if(n.severity==="medium")      geo=new T.TorusGeometry(sz*0.7,sz*0.28,12,24);
+  else if(n.severity==="low")         geo=new T.CylinderGeometry(sz*0.5,sz*0.5,sz*1.1,12);
+  else                                geo=new T.SphereGeometry(sz*0.85,16,16);
+
+  const ei=n.node_type==="project"?0.3:n.node_type==="target"?0.2:n.severity==="critical"?0.4:0.1;
+  const mat=new T.MeshLambertMaterial({color:c,emissive:c,emissiveIntensity:ei,transparent:true,opacity:0.9});
+  group.add(new T.Mesh(geo,mat));
+
+  // Wireframe overlay for critical
+  if(n.severity==="critical"){
+    group.add(new T.Mesh(geo,new T.MeshBasicMaterial({color:c,wireframe:true,transparent:true,opacity:0.3})));
+  }
+
+  // ── Always-visible node labels (colour from node, never black) ─────────
+  if(ST){
+    const isLight=graphTheme==="light";
+    const textMain=isSel?"#4ade80":isLight?"#111827":"#f1f5f9";
+    const spriteBg=isLight?"rgba(255,255,255,0.88)":"rgba(6,8,18,0.84)";
+    const fullName=n.label||n.value||"";
+    const nm=fullName.length>24?fullName.slice(0,22)+"…":fullName;
+
+    // Main name label — shown when showLabels on
+    if(showLabels && nm){
+      const spMain=new ST(nm);
+      spMain.color=textMain;
+      spMain.textHeight=3;
+      spMain.fontFace="monospace";
+      spMain.fontWeight="600";
+      spMain.backgroundColor=spriteBg;
+      spMain.borderWidth=0.9;
+      spMain.borderColor=col;
+      spMain.borderRadius=3;
+      spMain.padding=2;
+      spMain.position.y=sz+9;
+      group.add(spMain);
+    }
+
+    // Type / severity badge — ALWAYS visible so nodes are never unlabelled
+    let sublabel="";
+    if(n.node_type==="finding")         sublabel=(n.severity||"info").toUpperCase();
+    else if(n.node_type==="module_run") sublabel="MOD";
+    else if(n.node_type==="target")     sublabel=(n.target_type||"DOMAIN").toUpperCase().slice(0,8);
+    else if(n.node_type==="project")    sublabel="PROJECT";
+
+    if(sublabel){
+      const spSub=new ST(sublabel);
+      spSub.color=col;                  // node's own colour — readable on any bg
+      spSub.textHeight=2;
+      spSub.fontFace="monospace";
+      spSub.fontWeight="700";
+      spSub.backgroundColor="rgba(0,0,0,0)";
+      spSub.padding=0.5;
+      spSub.position.y=sz+4;
+      group.add(spSub);
+    }
+  }
+  return group;
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────
+function openDetail(n){
+  selNode=n;
+  const dp=document.getElementById("detail-panel"); dp.classList.add("open");
+  document.getElementById("dp-color").style.background=nColor(n);
+  document.getElementById("dp-type").textContent=(n.node_type||"node").replace("_"," ");
+  document.getElementById("dp-confirm").style.display=n.node_type==="finding"?"":"none";
+
+  let html="";
+  if(n.node_type==="finding"){
+    const sev=n.severity||"info";
+    html+=row("Title","<strong style='color:#e2e8f0'>"+esc(n.label||"")+"</strong>");
+    html+="<div style='display:flex;gap:6px;flex-wrap:wrap'><span class='sev-"+sev+"' style='padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid;text-transform:uppercase'>"+esc(sev)+"</span>";
+    if(n.cvss_score) html+="<span style='font-size:10px;font-family:monospace;color:#6b7280'>CVSS "+esc(String(n.cvss_score))+"</span>";
+    if(n.cve_id)     html+="<span style='font-size:10px;font-family:monospace;border:1px solid rgba(251,146,60,.4);color:#fb923c;padding:1px 7px;border-radius:4px'>"+esc(n.cve_id)+"</span>";
+    html+="</div>";
+    if(n.url)         html+=row("URL","<span style='font-family:monospace;font-size:10px;color:#60a5fa;word-break:break-all'>"+esc(n.url)+"</span>");
+    if(n.description) html+=row("Description","<span style='color:#9ca3af;line-height:1.5'>"+esc(n.description)+"</span>");
+    if(n.evidence)    html+=row("Evidence","<pre style='background:#0d0f18;color:#4ade80;border-radius:6px;padding:8px;font-size:10px;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid #1c1e2e'>"+esc(n.evidence)+"</pre>");
+    if(n.remediation) html+=row("Remediation","<span style='color:#6b7280'>"+esc(n.remediation)+"</span>");
+    html+=row("Status","<select id='dp-status-sel' style='width:100%;background:#12141e;border:1px solid #1c1e2e;color:#d1d5db;border-radius:8px;padding:6px 10px;font-size:11px;outline:none'><option value='open'"+(n.status==="open"?" selected":"")+" >Open</option><option value='confirmed'"+(n.status==="confirmed"?" selected":"")+">Confirmed</option><option value='fp'"+(n.status==="fp"?" selected":"")+">False Positive</option><option value='fixed'"+(n.status==="fixed"?" selected":"")+">Fixed</option><option value='wontfix'"+(n.status==="wontfix"?" selected":"")+">Would Not Fix</option></select>");
+    html+=row("Notes","<textarea id='dp-notes-ta' rows='3' placeholder='Analyst notes…' style='width:100%;background:#12141e;border:1px solid #1c1e2e;color:#e2e8f0;border-radius:8px;padding:7px 10px;font-size:11px;outline:none;resize:none;box-sizing:border-box'>"+esc(n.notes||"")+"</textarea>");
+  } else if(n.node_type==="module_run"){
+    html+=row("Module","<span style='font-family:monospace;color:#a78bfa'>"+esc(n.module_id||"")+"</span>");
+    const sc=n.status==="done"?"#4ade80":n.status==="running"?"#facc15":n.status==="failed"?"#f87171":"#6b7280";
+    html+=row("Status","<span style='color:"+sc+";font-family:monospace;text-transform:uppercase;font-size:11px'>"+esc(n.status||"")+"</span>");
+    html+=row("Findings","<span style='color:#e2e8f0;font-family:monospace'>"+esc(String(n.finding_count||0))+"</span>");
+    if(n.created_at) html+=row("Run at","<span style='font-family:monospace;font-size:10px;color:#6b7280'>"+fmtDate(n.created_at)+"</span>");
+    if(n.job_id)     html+="<a href='/scans/"+esc(n.job_id)+"/' class='dp-scan-link' style='display:flex;align-items:center;gap:5px;color:#818cf8;font-size:11px;text-decoration:none'><svg width='11' height='11' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'/></svg>View scan details</a>";
+  } else if(n.node_type==="target"){
+    html+=row("Value","<span style='font-family:monospace;color:#60a5fa;word-break:break-all'>"+esc(n.value||n.label||"")+"</span>");
+    html+=row("Type","<span style='color:#d1d5db;text-transform:uppercase;font-size:10px;font-family:monospace'>"+esc(n.target_type||"domain")+"</span>");
+    html+=row("Scope","<span style='color:"+(n.is_in_scope?"#4ade80":"#6b7280")+"'>"+( n.is_in_scope?"In-scope":"Out of scope")+"</span>");
+    html+="<a href='/modules/?target="+esc(n.target_id||"")+"' class='dp-run-mod-link' style='display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:#7c3aed;color:#fff;border-radius:8px;font-size:11px;text-decoration:none;transition:background .15s'><svg width='12' height='12' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' d='M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z'/></svg>Run Module</a>";
+  } else {
+    html+=row("Name","<strong style='color:#e2e8f0'>"+esc(n.label||n.value||"")+"</strong>");
+    if(n.description) html+=row("Description","<span style='color:#6b7280'>"+esc(n.description)+"</span>");
+  }
+
+  document.getElementById("dp-body").innerHTML=html;
+
+  // Attach events after innerHTML (avoids inline-handler quote escaping)
+  const _sel=document.getElementById("dp-status-sel");
+  if(_sel) _sel.addEventListener("change",e=>APP._saveFinding("status",e.target.value));
+  const _ta=document.getElementById("dp-notes-ta");
+  if(_ta) _ta.addEventListener("blur",e=>APP._saveFinding("notes",e.target.value));
+}
+
+function row(label,content){
+  return "<div><div style='font-size:10px;color:#374151;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em'>"+label+"</div>"+content+"</div>";
+}
+function esc(s){ const d=document.createElement("div"); d.appendChild(document.createTextNode(String(s))); return d.innerHTML; }
+function fmtDate(iso){ try{ return new Date(iso).toLocaleString("en-GB",{dateStyle:"medium",timeStyle:"short"}); }catch{ return iso; } }
+
+APP._saveFinding=async function(field,val){
+  if(!selNode||!selNode.finding_id) return;
+  const b={}; b[field]=val;
+  await fetch(FIND_API+selNode.finding_id+"/update/",{
+    method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":CSRF},body:JSON.stringify(b)
+  }).catch(()=>{});
+};
+
+// ── Context menu ──────────────────────────────────────────────────────────
+function initCtxMenu(){
+  const m=document.getElementById("ctx-menu");
+  document.addEventListener("click",()=>{m.style.display="none";});
+  m.addEventListener("click",ev=>{
+    const btn=ev.target.closest("button"); if(!btn||!selNode) return;
+    const a=btn.dataset.action;
+    if(a==="run-module") location.href="/modules/?target="+(selNode.target_id||"");
+    if(a==="confirm") APP.quickConfirm();
+    if(a==="copy") navigator.clipboard.writeText(selNode.value||selNode.url||selNode.label||"").catch(()=>{});
+    m.style.display="none";
+  });
+}
+function showCtx(x,y){ const m=document.getElementById("ctx-menu"); m.style.left=x+"px"; m.style.top=y+"px"; m.style.display="block"; }
+
+// ── WebSocket ─────────────────────────────────────────────────────────────
+function connectWS(){
+  try{
+    ws=new WebSocket(WS_URL);
+    ws.onopen=()=>{ document.getElementById("ws-dot").style.background="#22c55e"; document.getElementById("ws-txt").textContent="live"; };
+    ws.onclose=()=>{ document.getElementById("ws-dot").style.background="#374151"; document.getElementById("ws-txt").textContent="offline"; setTimeout(connectWS,5000); };
+    ws.onmessage=ev=>{ try{ const m=JSON.parse(ev.data||"{}"); if(m.type==="scan_complete"||m.type==="full_graph") APP.reload(); }catch(e){} };
+  }catch(e){}
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function showLoading(v){
+  const o=document.getElementById("loading-overlay");
+  if(o) o.style.display=v?"flex":"none";
+}
+
+// Close export dropdown on outside click
+document.addEventListener("click",ev=>{
+  if(!ev.target.closest("#export-wrap")) document.getElementById("export-dd").style.display="none";
+});
+
+// Boot
+document.addEventListener("DOMContentLoaded",()=>APP.init());
+
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base/base.html" %}
+{% block title %}{{ module.name }} — Modules — VulnX{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-3 mb-6">
+  <a href="{% url 'modules:list' %}"
+     class="text-gray-600 hover:text-gray-400 transition-colors shrink-0">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </a>
+  <div>
+    <div class="flex items-center gap-2">
+      <h1 class="text-xl font-bold text-white">{{ module.name }}</h1>
+      <span class="px-2 py-0.5 rounded border text-[10px] font-mono uppercase
+        {% if module.risk_level == 'critical' %}border-critical/40 text-critical bg-critical/5
+        {% elif module.risk_level == 'high' %}border-high/40 text-high bg-high/5
+        {% elif module.risk_level == 'medium' %}border-warn/40 text-warn bg-warn/5
+        {% else %}border-ok/40 text-ok bg-ok/5{% endif %}">
+        {{ module.risk_level|default:"LOW" }}
+      </span>
+    </div>
+    <p class="text-xs text-gray-500 mt-0.5">{{ module.category_label }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Module metadata -->
+  <div class="lg:col-span-1 space-y-4">
+
+    <!-- Run Scan CTA — moved here so topbar dropdown never overlaps it -->
+    <a href="{% url 'scans:create' module.id %}"
+       class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-xl text-sm font-semibold transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+      </svg>
+      Run Scan
+    </a>
+
+    <div class="bg-surface-card border border-surface-border rounded-xl p-5">
+      <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Module Info</h2>
+      <p class="text-sm text-gray-400">{{ module.description }}</p>
+    </div>
+
+    {% if module.tags %}
+    <div class="bg-surface-card border border-surface-border rounded-xl p-5">
+      <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Tags</h2>
+      <div class="flex flex-wrap gap-1.5">
+        {% for tag in module.tags %}
+        <span class="px-2 py-0.5 bg-surface-border rounded text-xs text-gray-400 font-mono">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-2.5 text-xs">
+      <div class="flex justify-between">
+        <span class="text-gray-600">Module ID</span>
+        <span class="text-gray-300 font-mono">{{ module.id }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Category</span>
+        <span class="text-gray-300 font-mono">{{ module.category_label }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Risk</span>
+        <span class="font-mono uppercase
+          {% if module.risk_level == 'critical' %}text-critical
+          {% elif module.risk_level == 'high' %}text-high
+          {% elif module.risk_level == 'medium' %}text-warn
+          {% else %}text-ok{% endif %}">{{ module.risk_level|default:"low" }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schema viewer -->
+  <div class="lg:col-span-2">
+    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between">
+        <span class="text-sm font-semibold text-white">Parameter Schema</span>
+        <span class="text-[10px] font-mono text-gray-600">{{ schema.parameters|length }} field{% if schema.parameters|length != 1 %}s{% endif %}</span>
+      </div>
+      {% if schema.parameters %}
+      <div class="divide-y divide-surface-border/50">
+        {% for field in schema.parameters %}
+        <div class="px-5 py-4">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-sm text-white font-mono">{{ field.name }}</span>
+            {% if field.label %}<span class="text-xs text-gray-500">— {{ field.label }}</span>{% endif %}
+            {% if field.required %}
+            <span class="text-[10px] font-mono text-critical border border-critical/30 bg-critical/5 px-1.5 py-0.5 rounded">REQUIRED</span>
+            {% else %}
+            <span class="text-[10px] font-mono text-gray-600 border border-surface-border px-1.5 py-0.5 rounded">OPTIONAL</span>
+            {% endif %}
+            <span class="text-[10px] font-mono text-gray-600 border border-surface-border px-1.5 py-0.5 rounded uppercase">{{ field.type|default:"string" }}</span>
+            {% if field.sensitive %}<span class="text-[10px] font-mono text-purple-400/70 border border-purple-800/40 px-1.5 py-0.5 rounded">SENSITIVE</span>{% endif %}
+          </div>
+          {% if field.help_text %}
+          <p class="text-xs text-gray-500">{{ field.help_text }}</p>
+          {% endif %}
+          {% if field.default is not None %}
+          <div class="mt-1">
+            <span class="text-[10px] text-gray-600">Default: </span>
+            <span class="text-[10px] font-mono text-gray-400">{{ field.default }}</span>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-12 text-center">
+        <p class="text-xs text-gray-600">No parameters defined for this module.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Raw JSON -->
+    {% if schema_json %}
+    <div class="mt-4 bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-surface-border">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Raw Schema (JSON)</span>
+      </div>
+      <pre class="px-5 py-4 text-xs text-gray-400 font-mono overflow-x-auto">{{ schema_json }}</pre>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

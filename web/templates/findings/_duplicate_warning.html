@@ -1,0 +1,4 @@
+<div class="border border-yellow-500/30 bg-yellow-500/10 rounded p-3 mt-2 text-xs text-yellow-400">
+  ⚠️ Possible duplicate: <a href="{% url 'finding_detail' existing.pk %}" class="underline">{{ existing.title|truncatechars:60 }}</a>
+  ({{ existing.get_severity_display }}, {{ existing.created_at|date:"M d" }})
+</div>

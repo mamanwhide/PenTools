@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+
+{% block title %}Profile — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <h1 class="text-2xl font-bold text-white mb-6">Profile</h1>
+
+  <div class="bg-surface-card border border-surface-border rounded-xl p-6 space-y-5">
+    <div>
+      <label class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Username</label>
+      <p class="text-white font-mono">{{ user.username }}</p>
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Email</label>
+      <p class="text-white">{{ user.email|default:"—" }}</p>
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 uppercase tracking-wider mb-1">Role</label>
+      <p class="text-white capitalize">{{ user.role }}</p>
+    </div>
+    <div class="border-t border-surface-border pt-4">
+      <label class="block text-xs text-gray-500 uppercase tracking-wider mb-2">API Key</label>
+      <div class="flex items-center gap-2" x-data="{ visible: false }">
+        <code class="flex-1 bg-surface font-mono text-xs text-gray-300 px-3 py-2 rounded-lg border border-surface-border overflow-x-auto"
+              x-text="visible ? '{{ user.api_key }}' : '••••••••••••••••••••••••••••••••••••••'">
+        </code>
+        <button @click="visible = !visible"
+                class="px-3 py-2 text-xs bg-surface-border hover:bg-surface-border/80 text-gray-300 rounded-lg">
+          <span x-text="visible ? 'Hide' : 'Show'">Show</span>
+        </button>
+      </div>
+      <form method="post" action="{% url 'accounts:regenerate_api_key' %}" class="mt-2">
+        {% csrf_token %}
+        <button type="submit"
+                class="text-xs text-red-400 hover:text-red-300"
+                onclick="return confirm('Regenerate API key? Existing integrations will break.')">
+          Regenerate key
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

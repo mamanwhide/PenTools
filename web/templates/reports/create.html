@@ -1,0 +1,173 @@
+{% extends "base/base.html" %}
+{% block title %}New Report — PenTools{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+<div class="mb-5 flex items-center gap-2 text-xs text-gray-500">
+  <a href="{% url 'report_list' %}" class="hover:text-white">Reports</a>
+  <span>/</span><span class="text-gray-300">New Report</span>
+</div>
+<div class="bg-surface-card border border-surface-border rounded p-6">
+  <h2 class="text-base font-bold text-white mb-5">Create Report</h2>
+  <form method="post" id="report-create-form">
+    {% csrf_token %}
+    <div class="space-y-4">
+
+      <!-- Project selector -->
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Project <span class="text-red-400">*</span></label>
+        <select name="project" id="sel-project" required
+                class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300">
+          <option value="">— Select project —</option>
+          {% for p in projects %}
+          <option value="{{ p.pk }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Target filter — populated dynamically when project is chosen -->
+      <div id="target-filter-section" style="display:none">
+        <label class="block text-xs text-gray-400 mb-1">
+          Scope to Targets
+          <span class="text-gray-600 font-normal ml-1">(leave all unchecked to include every target)</span>
+        </label>
+        <div id="target-checklist"
+             class="max-h-44 overflow-y-auto bg-surface border border-surface-border rounded p-3 space-y-1.5">
+          <!-- filled by JS -->
+        </div>
+        <p id="no-targets-msg" class="text-xs text-gray-600 mt-1" style="display:none">
+          No targets defined for this project yet.
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Report Title</label>
+        <input name="title" value="Penetration Test Report"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Company / Client Name</label>
+        <input name="company_name" placeholder="ACME Corp"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Assessor Name</label>
+        <input name="assessor_name" placeholder="Jane Doe"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Report Date</label>
+        <input name="report_date" type="date" value="{{ today }}"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Executive Summary</label>
+        <textarea name="executive_summary" rows="4" placeholder="High-level assessment overview…"
+                  class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 resize-y focus:outline-none focus:border-accent"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Minimum Severity to Include</label>
+        <select name="min_severity" class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300">
+          <option value="critical">Critical only</option>
+          <option value="high">High and above</option>
+          <option value="medium">Medium and above</option>
+          <option value="low">Low and above</option>
+          <option value="info" selected>All (Info and above)</option>
+        </select>
+      </div>
+      <div class="flex gap-4">
+        <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <input type="checkbox" name="include_evidence" value="1" checked class="rounded"> Include Evidence
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <input type="checkbox" name="include_remediation" value="1" checked class="rounded"> Include Remediation
+        </label>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button type="submit" class="px-5 py-2 bg-accent text-white rounded text-sm font-medium hover:bg-accent-hover">Create & Open Builder</button>
+      <a href="{% url 'report_list' %}" class="px-5 py-2 border border-surface-border text-gray-400 rounded text-sm">Cancel</a>
+    </div>
+  </form>
+</div>
+</div>
+
+<script>
+(function(){
+  const PROJECTS = {{ projects_json|safe }};
+  const projectMap = {};
+  PROJECTS.forEach(p => projectMap[p.id] = p);
+
+  const selProject   = document.getElementById('sel-project');
+  const filterSec    = document.getElementById('target-filter-section');
+  const checklist    = document.getElementById('target-checklist');
+  const noTargetsMsg = document.getElementById('no-targets-msg');
+
+  const TYPE_ICON = {
+    url:    '-',
+    domain: '-',
+    ip:     '-',
+    cidr:   '-',
+    host:   '-',
+  };
+
+  function renderTargets(projectId) {
+    checklist.innerHTML = '';
+    if (!projectId || !projectMap[projectId]) {
+      filterSec.style.display = 'none';
+      return;
+    }
+    const targets = projectMap[projectId].targets;
+    filterSec.style.display = '';
+    if (!targets.length) {
+      noTargetsMsg.style.display = '';
+      checklist.style.display = 'none';
+      return;
+    }
+    noTargetsMsg.style.display = 'none';
+    checklist.style.display = '';
+
+    // "Select all" toggle row
+    const allRow = document.createElement('label');
+    allRow.className = 'flex items-center gap-2 text-xs text-gray-500 cursor-pointer pb-1.5 border-b border-surface-border mb-1';
+    allRow.innerHTML = `
+      <input type="checkbox" id="chk-all-targets" class="rounded">
+      <span class="font-semibold">All targets (${targets.length})</span>`;
+    checklist.appendChild(allRow);
+
+    targets.forEach(t => {
+      const row = document.createElement('label');
+      row.className = 'flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white';
+      const icon = TYPE_ICON[t.type] || '◉';
+      row.innerHTML = `
+        <input type="checkbox" name="target_ids" value="${t.id}" class="rounded target-chk">
+        <span class="text-gray-600">${icon}</span>
+        <span class="font-mono">${escHtml(t.value)}</span>
+        <span class="text-gray-600 text-[10px] uppercase">${t.type}</span>`;
+      checklist.appendChild(row);
+    });
+
+    // "Select all" logic
+    const chkAll = document.getElementById('chk-all-targets');
+    const targetChks = () => checklist.querySelectorAll('.target-chk');
+    chkAll.addEventListener('change', () => {
+      targetChks().forEach(c => c.checked = chkAll.checked);
+    });
+    checklist.addEventListener('change', e => {
+      if (!e.target.classList.contains('target-chk')) return;
+      const all = [...targetChks()];
+      chkAll.checked = all.every(c => c.checked);
+      chkAll.indeterminate = !chkAll.checked && all.some(c => c.checked);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  selProject.addEventListener('change', () => renderTargets(selProject.value));
+
+  // If a project is already selected on load (e.g. browser back)
+  if (selProject.value) renderTargets(selProject.value);
+})();
+</script>
+{% endblock %}

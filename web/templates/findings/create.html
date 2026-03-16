@@ -1,0 +1,119 @@
+{% extends "base/base.html" %}
+{% block title %}New Manual Finding — PenTools{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+<div class="mb-5 flex items-center gap-2 text-xs text-gray-500">
+  <a href="{% url 'finding_list' %}" class="hover:text-white">Findings</a>
+  <span>/</span><span class="text-gray-300">New Manual Finding</span>
+</div>
+
+<div class="bg-surface-card border border-surface-border rounded p-6" x-data="{severity: 'medium'}">
+  <h2 class="text-base font-bold text-white mb-5">Manual Finding Entry</h2>
+  <form method="post" action="{% url 'finding_create' %}">
+    {% csrf_token %}
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Title <span class="text-red-400">*</span></label>
+        <input name="title" required placeholder="e.g. Reflected XSS in search parameter"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+               hx-get="{% url 'finding_check_duplicate' %}"
+               hx-trigger="blur"
+               hx-include="[name='title'],[name='url'],[name='evidence']"
+               hx-target="#duplicate-check">
+        <div id="duplicate-check"></div>
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Severity <span class="text-red-400">*</span></label>
+        <select name="severity" x-model="severity"
+                class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300">
+          {% for val, label in severity_choices %}
+          <option value="{{ val }}" {% if val == "medium" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Project</label>
+        <select name="project" class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300">
+          <option value="">— None —</option>
+          {% for p in projects %}
+          <option value="{{ p.pk }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">URL / Endpoint</label>
+        <input name="url" type="url" placeholder="https://target.example.com/search?q="
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Description</label>
+        <textarea name="description" rows="4" placeholder="Describe the vulnerability, attack vector, and impact…"
+                  class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 resize-y focus:outline-none focus:border-accent"></textarea>
+      </div>
+
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Evidence</label>
+        <textarea name="evidence" rows="4" placeholder="Paste PoC request/response, screenshot description, or raw output…"
+                  class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-gray-400 resize-y focus:outline-none focus:border-accent"></textarea>
+      </div>
+
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Remediation</label>
+        <textarea name="remediation" rows="3"
+                  class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 resize-y focus:outline-none focus:border-accent"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CVSS Score (0–10)</label>
+        <input name="cvss_score" type="number" step="0.1" min="0" max="10" placeholder="7.5"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CVSS Vector</label>
+        <input name="cvss_vector" placeholder="CVSS:3.1/AV:N/AC:L/…"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-xs font-mono text-gray-400 focus:outline-none focus:border-accent">
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CVE ID</label>
+        <input name="cve_id" placeholder="CVE-2024-XXXXX"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent">
+      </div>
+
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">CWE ID</label>
+        <input name="cwe_id" placeholder="CWE-79" list="cwe-list"
+               class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm font-mono text-gray-300 focus:outline-none focus:border-accent">
+        <datalist id="cwe-list">
+          {% for cid, clabel in cwe_suggestions %}
+          <option value="{{ cid }}" label="{{ clabel }}">
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Notes</label>
+        <textarea name="notes" rows="2" placeholder="Internal notes, reproduction steps, references…"
+                  class="w-full bg-surface border border-surface-border rounded px-3 py-2 text-sm text-gray-400 resize-y focus:outline-none focus:border-accent"></textarea>
+      </div>
+    </div>
+
+    {# CVSS Calculator link #}
+    <div class="mb-4 p-3 bg-surface border border-surface-border rounded text-xs text-gray-500">
+      Need help with CVSS score?
+      <a href="{% url 'cvss_calculator' %}" target="_blank" class="text-accent hover:underline">Open CVSS 3.1 Calculator →</a>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="px-5 py-2 bg-accent text-white rounded text-sm font-medium hover:bg-accent-hover">Save Finding</button>
+      <a href="{% url 'finding_list' %}" class="px-5 py-2 border border-surface-border text-gray-400 rounded text-sm">Cancel</a>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}

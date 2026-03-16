@@ -1,0 +1,91 @@
+{% extends "base/base.html" %}
+
+{% block title %}Scans — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-white">Scans</h1>
+    <a href="{% url 'modules:list' %}"
+       class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors">
+      + New Scan
+    </a>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="flex gap-2 mb-4">
+    <a href="{% url 'scans:list' %}"
+       class="px-3 py-1.5 text-xs rounded-lg border {% if not status_filter %}bg-accent/20 border-accent/50 text-white{% else %}border-surface-border text-gray-400 hover:text-white{% endif %} transition-colors">
+      All
+    </a>
+    {% for value, label in status_choices %}
+    <a href="?status={{ value }}"
+       class="px-3 py-1.5 text-xs rounded-lg border {% if status_filter == value %}bg-accent/20 border-accent/50 text-white{% else %}border-surface-border text-gray-400 hover:text-white{% endif %} transition-colors">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    {% if jobs %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase tracking-wider border-b border-surface-border bg-surface/50">
+          <th class="px-5 py-3 text-left">ID</th>
+          <th class="px-5 py-3 text-left">Module</th>
+          <th class="px-5 py-3 text-left">Target</th>
+          <th class="px-5 py-3 text-left">Status</th>
+          <th class="px-5 py-3 text-right">Findings</th>
+          <th class="px-5 py-3 text-left">Started</th>
+          <th class="px-5 py-3 text-left">Duration</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-border">
+        {% for job in jobs %}
+        <tr class="hover:bg-surface/50 transition-colors">
+          <td class="px-5 py-3">
+            <a href="{% url 'scans:detail' job.id %}"
+               class="font-mono text-xs text-gray-400 hover:text-accent">
+              {{ job.id|slice:":8" }}
+            </a>
+          </td>
+          <td class="px-5 py-3">
+            <a href="{% url 'scans:detail' job.id %}" class="font-mono text-accent hover:underline text-sm">
+              {{ job.module_id }}
+            </a>
+          </td>
+          <td class="px-5 py-3 text-gray-400 text-xs font-mono">
+            {% if job.target %}{{ job.target.value|truncatechars:30 }}{% else %}—{% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+              {% if job.status == 'done' %}bg-green-900/30 text-green-400 border border-green-900
+              {% elif job.status == 'running' %}bg-blue-900/30 text-blue-400 border border-blue-900 animate-pulse
+              {% elif job.status == 'failed' %}bg-red-900/30 text-red-400 border border-red-900
+              {% elif job.status == 'cancelled' %}bg-gray-800 text-gray-500 border border-gray-700
+              {% else %}bg-yellow-900/30 text-yellow-400 border border-yellow-900{% endif %}">
+              {{ job.status }}
+            </span>
+          </td>
+          <td class="px-5 py-3 text-right font-mono text-sm">
+            {% if job.critical_count %}<span class="text-red-400">{{ job.critical_count }}C </span>{% endif %}
+            {% if job.high_count %}<span class="text-orange-400">{{ job.high_count }}H </span>{% endif %}
+            <span class="text-gray-500">{{ job.finding_count }}</span>
+          </td>
+          <td class="px-5 py-3 text-gray-500 text-xs font-mono">{{ job.created_at|date:"M d H:i" }}</td>
+          <td class="px-5 py-3 text-gray-500 text-xs font-mono">
+            {% if job.duration_seconds %}{{ job.duration_seconds }}s{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="py-16 text-center text-gray-600">
+      <p class="text-sm">No scans yet.</p>
+      <a href="{% url 'modules:list' %}" class="mt-2 inline-block text-accent hover:underline text-sm">Browse modules →</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

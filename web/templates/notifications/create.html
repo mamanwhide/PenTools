@@ -1,0 +1,167 @@
+{% extends "base/base.html" %}
+{% block title %}Add Notification Channel — PenTools{% endblock %}
+{% block content %}
+<div class="mb-4 flex items-center gap-2 text-xs text-gray-500">
+  <a href="{% url 'channel_list' %}" class="hover:text-white">Channels</a>
+  <span>/</span><span class="text-gray-300">Add Channel</span>
+</div>
+
+<h1 class="text-xl font-bold text-white mb-5">Add Notification Channel</h1>
+
+<div class="max-w-2xl">
+  <form method="post"
+        x-data="{ type: '{{ form.channel_type.value|default:'slack' }}' }">
+    {% csrf_token %}
+
+    {# Errors #}
+    {% if form.errors %}
+    <div class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
+      {% for field, errs in form.errors.items %}
+        {% for e in errs %}<div>{{ field|capfirst }}: {{ e }}</div>{% endfor %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-surface-card border border-surface-border rounded p-5 space-y-5">
+
+      {# ── Channel type ── #}
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase mb-2">Channel Type</label>
+        <div class="flex gap-3">
+          {% for val, label in form.channel_type.field.choices %}
+          <label class="flex-1 cursor-pointer">
+            <input type="radio" name="channel_type" value="{{ val }}" x-model="type"
+              {% if form.channel_type.value == val or not form.channel_type.value and forloop.first %}checked{% endif %}
+              class="sr-only peer">
+            <div class="border border-surface-border rounded-lg p-3 text-center text-sm transition-all
+              peer-checked:border-accent peer-checked:bg-accent/10 hover:border-gray-600">
+              {% if val == 'telegram' %}🤖{% elif val == 'slack' %}💬{% else %}📧{% endif %}
+              <div class="font-medium text-white mt-1">{{ label }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Project scope ── #}
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Project Scope</label>
+        <select name="project" class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          <option value="">Global (all projects)</option>
+          {% for proj in projects %}
+          <option value="{{ proj.pk }}" {% if form.project.value == proj.pk|stringformat:"s" %}selected{% endif %}>{{ proj }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-600 mt-0.5">Leave empty to receive alerts for all projects.</p>
+      </div>
+
+      {# ── Telegram fields ── #}
+      <div x-show="type === 'telegram'" x-cloak class="space-y-3 border border-blue-500/20 rounded-lg p-4">
+        <div class="text-xs font-semibold text-blue-400 uppercase mb-2">Telegram Settings</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Bot Token</label>
+          <input type="text" name="telegram_bot_token" value="{{ form.telegram_bot_token.value|default:'' }}"
+            placeholder="123456789:AAbbCCdd..."
+            class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent font-mono">
+          <p class="text-xs text-gray-600 mt-0.5">Create via @BotFather on Telegram.</p>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Chat ID</label>
+          <input type="text" name="telegram_chat_id" value="{{ form.telegram_chat_id.value|default:'' }}"
+            placeholder="-1001234567890"
+            class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent font-mono">
+          <p class="text-xs text-gray-600 mt-0.5">Group chat ID (negative) or personal chat ID.</p>
+        </div>
+      </div>
+
+      {# ── Slack fields ── #}
+      <div x-show="type === 'slack'" x-cloak class="space-y-3 border border-yellow-500/20 rounded-lg p-4">
+        <div class="text-xs font-semibold text-yellow-400 uppercase mb-2">Slack Settings</div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Incoming Webhook URL</label>
+          <input type="url" name="slack_webhook_url" value="{{ form.slack_webhook_url.value|default:'' }}"
+            placeholder="https://hooks.slack.com/services/..."
+            class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent font-mono">
+          <p class="text-xs text-gray-600 mt-0.5">Create at api.slack.com → Your App → Incoming Webhooks.</p>
+        </div>
+      </div>
+
+      {# ── Email fields ── #}
+      <div x-show="type === 'email'" x-cloak class="space-y-3 border border-green-500/20 rounded-lg p-4">
+        <div class="text-xs font-semibold text-green-400 uppercase mb-2">Email / SMTP Settings</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">SMTP Host</label>
+            <input type="text" name="smtp_host" value="{{ form.smtp_host.value|default:'' }}"
+              placeholder="smtp.gmail.com"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">SMTP Port</label>
+            <input type="number" name="smtp_port" value="{{ form.smtp_port.value|default:'587' }}"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" name="smtp_use_tls" id="smtp_tls" {% if form.smtp_use_tls.value %}checked{% endif %}
+            class="w-4 h-4 accent-accent">
+          <label for="smtp_tls" class="text-sm text-gray-300">Use TLS (STARTTLS)</label>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Username</label>
+            <input type="text" name="smtp_username" value="{{ form.smtp_username.value|default:'' }}"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Password</label>
+            <input type="password" name="smtp_password"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">From Address</label>
+            <input type="email" name="email_from" value="{{ form.email_from.value|default:'' }}"
+              placeholder="alerts@yourdomain.com"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">To Address</label>
+            <input type="email" name="email_to" value="{{ form.email_to.value|default:'' }}"
+              placeholder="security-team@yourdomain.com"
+              class="w-full bg-surface border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-accent">
+          </div>
+        </div>
+      </div>
+
+      {# ── Trigger Events (checkbox group) ── #}
+      <div>
+        <label class="block text-xs font-semibold text-gray-400 uppercase mb-2">Trigger Events</label>
+        <div class="grid grid-cols-2 gap-2">
+          {% for event_val, event_label in trigger_event_choices %}
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="trigger_events" value="{{ event_val }}"
+              {% if event_val in selected_events %}checked{% endif %}
+              class="w-4 h-4 accent-accent">
+            <span class="text-sm text-gray-300">{{ event_label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Active toggle ── #}
+      <div class="flex items-center gap-2">
+        <input type="checkbox" name="is_active" id="is_active" checked class="w-4 h-4 accent-accent">
+        <label for="is_active" class="text-sm text-gray-300">Enable this channel immediately</label>
+      </div>
+
+    </div>
+
+    <div class="flex gap-3 mt-4">
+      <button type="submit" class="px-5 py-2 bg-accent text-white rounded text-sm hover:bg-accent-hover">Save Channel</button>
+      <a href="{% url 'channel_list' %}" class="px-5 py-2 border border-surface-border text-gray-400 rounded text-sm hover:text-white">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+{% block title %}Reports — PenTools{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-bold text-white">Reports</h1>
+    <p class="text-gray-500 text-xs mt-0.5">Generate and download pentest reports</p>
+  </div>
+  <a href="{% url 'report_create' %}" class="px-4 py-2 bg-accent text-white rounded text-sm font-medium hover:bg-accent-hover transition">+ New Report</a>
+</div>
+
+<div class="bg-surface-card border border-surface-border rounded overflow-hidden">
+  {% if reports %}
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-surface-border text-gray-500 text-xs uppercase">
+        <th class="text-left px-4 py-2.5">Title</th>
+        <th class="text-left px-4 py-2.5">Project</th>
+        <th class="text-left px-4 py-2.5">Status</th>
+        <th class="text-left px-4 py-2.5">Format</th>
+        <th class="text-left px-4 py-2.5">Generated</th>
+        <th class="text-left px-4 py-2.5">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr class="border-b border-surface-border/50 hover:bg-surface-hover transition-colors">
+        <td class="px-4 py-2.5">
+          <a href="{% url 'report_detail' r.pk %}" class="text-white hover:text-accent font-medium">{{ r.title|truncatechars:60 }}</a>
+        </td>
+        <td class="px-4 py-2.5 text-gray-400 text-xs">{{ r.project.name }}</td>
+        <td class="px-4 py-2.5">
+          <span class="text-xs px-2 py-0.5 rounded border
+            {% if r.status == 'ready' %}border-green-500/30 text-green-400
+            {% elif r.status == 'generating' %}border-blue-500/30 text-blue-400
+            {% elif r.status == 'failed' %}border-red-500/30 text-red-400
+            {% else %}border-surface-border text-gray-400{% endif %}">
+            {{ r.get_status_display }}
+          </span>
+        </td>
+        <td class="px-4 py-2.5 text-gray-500 text-xs uppercase">{{ r.last_format|default:"—" }}</td>
+        <td class="px-4 py-2.5 text-gray-500 text-xs">{{ r.generated_at|date:"M d, Y H:i"|default:"—" }}</td>
+        <td class="px-4 py-2.5">
+          <div class="flex gap-2">
+            <a href="{% url 'report_builder' r.pk %}" class="text-xs text-accent hover:underline">Builder</a>
+            {% if r.status == 'ready' %}
+            <a href="{% url 'report_download' r.pk %}" class="text-xs text-green-400 hover:underline">Download</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="py-16 text-center text-gray-600">
+    <div class="text-4xl mb-3">📄</div>
+    <p class="text-sm">No reports yet.</p>
+    <a href="{% url 'report_create' %}" class="mt-3 inline-block text-accent text-sm hover:underline">Create your first report</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

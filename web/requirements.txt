@@ -1,0 +1,44 @@
+Django==5.1.4
+djangorestframework==3.15.2
+channels==4.1.0
+channels-redis==4.2.0
+daphne==4.1.2
+celery==5.4.0
+flower==2.0.1
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+redis==5.2.1
+psycopg2-binary==2.9.10
+gunicorn==23.0.0
+uvicorn[standard]==0.32.1
+
+# Security
+cryptography==43.0.3
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.6.0
+
+# ORM / DB utils
+django-extensions==3.2.3
+
+# Forms & Serialization
+django-widget-tweaks==1.5.0
+
+# Validation
+validators==0.34.0
+
+# Reports
+WeasyPrint==68.1
+Jinja2==3.1.4
+
+# Dev & Testing
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+faker==33.1.0
+factory-boy==3.3.1
+
+# Utilities
+python-decouple==3.8
+requests==2.32.3
+httpx==0.28.1

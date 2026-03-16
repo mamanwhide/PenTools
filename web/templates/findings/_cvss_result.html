@@ -1,0 +1,20 @@
+{% if score is not None %}
+{% with rating=rating %}
+<div class="p-4 rounded border {% if rating == 'Critical' %}border-red-500/30 bg-red-500/10{% elif rating == 'High' %}border-orange-500/30 bg-orange-500/10{% elif rating == 'Medium' %}border-yellow-500/30 bg-yellow-500/10{% elif rating == 'Low' %}border-blue-500/30 bg-blue-500/10{% else %}border-surface-border bg-surface{% endif %}">
+  <div class="flex items-center gap-4">
+    <div class="text-center">
+      <div class="text-4xl font-bold {% if rating == 'Critical' %}text-red-400{% elif rating == 'High' %}text-orange-400{% elif rating == 'Medium' %}text-yellow-400{% elif rating == 'Low' %}text-blue-400{% else %}text-gray-400{% endif %}">{{ score }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">/ 10.0</div>
+    </div>
+    <div>
+      <div class="text-lg font-semibold {% if rating == 'Critical' %}text-red-400{% elif rating == 'High' %}text-orange-400{% elif rating == 'Medium' %}text-yellow-400{% elif rating == 'Low' %}text-blue-400{% else %}text-gray-400{% endif %}">{{ rating }}</div>
+      <p class="text-xs font-mono text-gray-500 mt-0.5 break-all">{{ vector }}</p>
+    </div>
+    <button class="ml-auto px-3 py-1.5 border border-surface-border text-gray-400 rounded text-xs hover:text-white"
+            onclick="navigator.clipboard.writeText('{{ vector }}')">
+      Copy Vector
+    </button>
+  </div>
+</div>
+{% endwith %}
+{% endif %}

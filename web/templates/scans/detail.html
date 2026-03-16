@@ -1,0 +1,249 @@
+{% extends "base/base.html" %}
+
+{% block title %}Scan {{ job.id|slice:":8" }} — {{ job.module_id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto" x-data="scanConsole('{{ job.id }}', '{{ job.status }}')">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-3">
+        <span class="font-mono text-accent font-bold text-lg">{{ job.module_id }}</span>
+        <span class="text-gray-500 font-mono text-sm">{{ job.id|slice:":8" }}…</span>
+        <span :class="statusBadgeClass" class="px-2 py-0.5 rounded-full text-xs font-mono font-semibold border">
+          <span x-text="status"></span>
+        </span>
+      </div>
+      <p class="text-gray-500 text-sm mt-1">
+        Started: {{ job.created_at|date:"Y-m-d H:i:s" }}
+        {% if job.target %} · Target: <span class="text-gray-300">{{ job.target.value }}</span>{% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if job.status == 'pending' or job.status == 'running' %}
+      <button @click="cancelScan()"
+              :disabled="cancelling"
+              class="px-3 py-1.5 text-sm bg-red-900/40 hover:bg-red-900/60 disabled:opacity-50 border border-red-700 text-red-300 rounded-lg transition-colors">
+        <span x-text="cancelling ? 'Cancelling...' : 'Cancel'">Cancel</span>
+      </button>
+      {% endif %}
+      {% if job.status == 'failed' or job.status == 'cancelled' %}
+      <form method="post" action="{% url 'scans:retry' job.id %}" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-3 py-1.5 text-sm bg-yellow-900/30 hover:bg-yellow-900/50 border border-yellow-700 text-yellow-300 rounded-lg transition-colors">
+          ↺ Retry
+        </button>
+      </form>
+      {% endif %}
+      <a href="{% url 'scans:list' %}"
+         class="px-3 py-1.5 text-sm bg-surface-border hover:bg-surface-border/80 text-gray-300 rounded-lg transition-colors">
+        ← Back
+      </a>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="mb-6 bg-surface-card border border-surface-border rounded-xl p-4">
+    <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+      <span>Progress</span>
+      <span x-text="progress + '%'">{{ job.progress }}%</span>
+    </div>
+    <div class="h-2 bg-surface rounded-full overflow-hidden">
+      <div class="h-full bg-accent rounded-full transition-all duration-500"
+           :style="'width:' + progress + '%'"></div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="flex gap-6 mt-4 text-sm">
+      <div>
+        <span class="text-gray-500">Findings</span>
+        <span class="ml-2 font-mono text-white" x-text="findingCount">{{ job.finding_count }}</span>
+      </div>
+      <div>
+        <span class="text-critical">Critical</span>
+        <span class="ml-1 font-mono text-white" x-text="criticalCount">{{ job.critical_count }}</span>
+      </div>
+      <div>
+        <span class="text-high">High</span>
+        <span class="ml-1 font-mono text-white" x-text="highCount">{{ job.high_count }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log console -->
+  <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-surface-border">
+      <span class="text-xs text-gray-400 font-mono">LIVE OUTPUT</span>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full" :class="wsConnected ? 'bg-ok animate-pulse' : 'bg-gray-600'"></span>
+        <span class="text-xs text-gray-500" x-text="wsConnected ? 'Connected' : 'Disconnected'"></span>
+        <button @click="clearLogs()"
+                class="text-xs text-gray-600 hover:text-gray-400 ml-3">Clear</button>
+      </div>
+    </div>
+    <div id="log-container"
+         class="h-96 overflow-y-auto p-4 space-y-0.5 font-mono"
+         x-ref="logContainer">
+      <!-- Pre-loaded history -->
+      {% for log in recent_logs %}
+      <div class="log-line log-{{ log.level }}">
+        <span class="text-gray-600 select-none">{{ log.timestamp|date:"H:i:s" }}</span>
+        <span class="ml-2">{{ log.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Findings panel (visible when scan completed) -->
+  {% if job.status == 'done' or job.status == 'failed' %}
+  {% with findings=job.findings.all %}
+  {% if findings %}
+  <div class="mt-6 bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between">
+      <span class="text-sm font-semibold text-white">Findings</span>
+      <span class="text-xs font-mono text-gray-500">{{ findings|length }} total</span>
+    </div>
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="border-b border-surface-border text-gray-500 uppercase tracking-wider">
+          <th class="px-5 py-2.5 text-left">Title</th>
+          <th class="px-4 py-2.5 text-left">Severity</th>
+          <th class="px-4 py-2.5 text-left">URL</th>
+          <th class="px-4 py-2.5 text-left">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for finding in findings %}
+        <tr class="border-b border-surface-border/50 hover:bg-surface-border/20 transition-colors">
+          <td class="px-5 py-3 text-gray-300">{{ finding.title|truncatechars:60 }}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded border font-mono text-[10px] uppercase
+              {% if finding.severity == 'critical' %}border-critical/40 text-critical bg-critical/5
+              {% elif finding.severity == 'high' %}border-high/40 text-high bg-high/5
+              {% elif finding.severity == 'medium' %}border-warn/40 text-warn bg-warn/5
+              {% elif finding.severity == 'low' %}border-ok/40 text-ok bg-ok/5
+              {% else %}border-gray-700 text-gray-500{% endif %}">
+              {{ finding.severity }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-gray-500 font-mono truncate max-w-[200px]">{{ finding.url|truncatechars:40 }}</td>
+          <td class="px-4 py-3">
+            <span class="text-gray-500 font-mono">{{ finding.status }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% endwith %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function scanConsole(jobId, initialStatus) {
+  return {
+    jobId,
+    status: initialStatus,
+    progress: {{ job.progress }},
+    findingCount: {{ job.finding_count }},
+    criticalCount: {{ job.critical_count }},
+    highCount: {{ job.high_count }},
+    wsConnected: false,
+    cancelling: false,
+    ws: null,
+
+    get statusBadgeClass() {
+      const map = {
+        pending:   'bg-yellow-900/30 border-yellow-700 text-yellow-400',
+        running:   'bg-blue-900/30 border-blue-700 text-blue-400',
+        done:      'bg-green-900/30 border-green-700 text-green-400',
+        failed:    'bg-red-900/30 border-red-700 text-red-400',
+        cancelled: 'bg-gray-900/30 border-gray-700 text-gray-400',
+      };
+      return map[this.status] || 'bg-gray-900/30 border-gray-700 text-gray-400';
+    },
+
+    init() {
+      if (['done', 'failed', 'cancelled'].includes(this.status)) return;
+      this.connectWS();
+    },
+
+    async cancelScan() {
+      if (!confirm('Cancel this scan?')) return;
+      this.cancelling = true;
+      try {
+        const resp = await fetch('{% url "scans:cancel" job.id %}', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+          },
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          this.status = data.status;
+          if (this.ws) this.ws.close();
+        }
+      } catch(e) {
+        console.error('Cancel failed:', e);
+      } finally {
+        this.cancelling = false;
+      }
+    },
+
+    connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      this.ws = new WebSocket(`${proto}://${location.host}/ws/scan/${this.jobId}/`);
+
+      this.ws.onopen = () => { this.wsConnected = true; };
+      this.ws.onclose = () => {
+        this.wsConnected = false;
+        if (!['done', 'failed', 'cancelled'].includes(this.status)) {
+          setTimeout(() => this.connectWS(), 3000);
+        }
+      };
+      this.ws.onerror = () => { this.wsConnected = false; };
+
+      this.ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'log') {
+          this.appendLog(data.level, data.timestamp, data.message);
+        } else if (data.type === 'progress') {
+          this.progress = data.progress;
+          this.status   = data.status;
+        } else if (data.type === 'complete') {
+          this.status = data.status;
+          this.progress = 100;
+          this.findingCount = data.finding_count || this.findingCount;
+          this.ws.close();
+          setTimeout(() => location.reload(), 1500);
+        }
+      };
+    },
+
+    appendLog(level, ts, message) {
+      const container = this.$refs.logContainer;
+      const line = document.createElement('div');
+      line.className = `log-line log-${level}`;
+      const time = ts ? new Date(ts).toTimeString().slice(0, 8) : '';
+      line.innerHTML = `<span class="text-gray-600 select-none">${time}</span><span class="ml-2">${this.escapeHtml(message)}</span>`;
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    },
+
+    clearLogs() {
+      this.$refs.logContainer.innerHTML = '';
+    },
+
+    escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    },
+  };
+}
+</script>
+{% endblock %}

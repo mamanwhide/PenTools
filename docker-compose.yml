@@ -1,0 +1,144 @@
+x-common-env: &common-env
+  env_file:
+    - .env
+
+x-celery-base: &celery-base
+  build:
+    context: ./web
+    dockerfile: Dockerfile
+  volumes:
+    - ./web:/app
+    - tools_bin:/opt/tools
+    - wordlists:/app/wordlists/builtin
+    - scan_output:/tmp/pentools
+  env_file:
+    - .env
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+
+  # ─── PostgreSQL ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Django Web (ASGI via Uvicorn + Gunicorn) ───────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    command: /scripts/entrypoint.sh
+    volumes:
+      - ./web:/app
+      - tools_bin:/opt/tools
+      - wordlists:/app/wordlists/builtin
+      - scan_output:/tmp/pentools
+      - ./staticfiles:/app/staticfiles
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ─── Celery Worker ──────────────────────────────────────────
+  celery:
+    <<: *celery-base
+    command: /scripts/celery-entrypoint.sh
+    environment:
+      CELERY_WORKER_TYPE: worker
+
+  # ─── Celery Beat (Scheduler) ────────────────────────────────
+  celery_beat:
+    <<: *celery-base
+    command: >
+      celery -A pentools beat
+        --loglevel=info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      CELERY_WORKER_TYPE: beat
+
+  # ─── Flower (Celery Monitor) ────────────────────────────────
+  flower:
+    <<: *celery-base
+    command: >
+      celery -A pentools flower
+        --port=5555
+        --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    ports:
+      - "127.0.0.1:5555:5555"
+    environment:
+      CELERY_WORKER_TYPE: flower
+
+  # ─── Pentest Tools Container ────────────────────────────────
+  # This container installs all pentest binaries into a shared volume.
+  # The web + celery containers mount tools_bin and get access to tools.
+  tools:
+    build:
+      context: ./tools
+      dockerfile: Dockerfile
+    volumes:
+      - tools_bin:/opt/tools
+      - wordlists:/wordlists
+    restart: "no"   # One-time setup container
+
+  # ─── Nginx (Reverse Proxy) ──────────────────────────────────
+  nginx:
+    image: nginx:1.26-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./staticfiles:/app/staticfiles:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  tools_bin:
+  wordlists:
+  scan_output:

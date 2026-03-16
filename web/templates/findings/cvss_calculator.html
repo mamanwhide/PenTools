@@ -1,0 +1,109 @@
+{% extends "base/base.html" %}
+{% block title %}CVSS 3.1 Calculator — PenTools{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+<h1 class="text-xl font-bold text-white mb-1">CVSS 3.1 Base Score Calculator</h1>
+<p class="text-xs text-gray-500 mb-5">Compute CVSS 3.1 base score interactively.</p>
+
+<div class="bg-surface-card border border-surface-border rounded p-6">
+  <form method="post" hx-post="{% url 'cvss_calculator' %}" hx-target="#cvss-result" hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="grid grid-cols-2 gap-5 mb-5">
+
+      {# AV #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Attack Vector (AV)</label>
+        <div class="flex flex-wrap gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AV" value="N" checked class="accent-violet-500"> Network</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AV" value="A" class="accent-violet-500"> Adjacent</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AV" value="L" class="accent-violet-500"> Local</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AV" value="P" class="accent-violet-500"> Physical</label>
+        </div>
+      </div>
+
+      {# AC #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Attack Complexity (AC)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AC" value="L" checked class="accent-violet-500"> Low</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="AC" value="H" class="accent-violet-500"> High</label>
+        </div>
+      </div>
+
+      {# PR #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Privileges Required (PR)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="PR" value="N" checked class="accent-violet-500"> None</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="PR" value="L" class="accent-violet-500"> Low</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="PR" value="H" class="accent-violet-500"> High</label>
+        </div>
+      </div>
+
+      {# UI #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">User Interaction (UI)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="UI" value="N" checked class="accent-violet-500"> None</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="UI" value="R" class="accent-violet-500"> Required</label>
+        </div>
+      </div>
+
+      {# S #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Scope (S)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="S" value="U" checked class="accent-violet-500"> Unchanged</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="S" value="C" class="accent-violet-500"> Changed</label>
+        </div>
+      </div>
+
+      <div></div>
+
+      {# C #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Confidentiality Impact (C)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="C" value="N" checked class="accent-violet-500"> None</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="C" value="L" class="accent-violet-500"> Low</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="C" value="H" class="accent-violet-500"> High</label>
+        </div>
+      </div>
+
+      {# I #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Integrity Impact (I)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="I" value="N" checked class="accent-violet-500"> None</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="I" value="L" class="accent-violet-500"> Low</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="I" value="H" class="accent-violet-500"> High</label>
+        </div>
+      </div>
+
+      {# A #}
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-2">Availability Impact (A)</label>
+        <div class="flex gap-3">
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="A" value="N" checked class="accent-violet-500"> None</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="A" value="L" class="accent-violet-500"> Low</label>
+          <label class="text-xs text-gray-400 flex items-center gap-1 cursor-pointer"><input type="radio" name="A" value="H" class="accent-violet-500"> High</label>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="w-full py-2.5 bg-accent text-white rounded text-sm font-medium hover:bg-accent-hover">
+      Calculate Score
+    </button>
+  </form>
+
+  <div id="cvss-result" class="mt-5">
+    {% if is_post %}
+    {% with score=score rating=rating vector=vector %}
+    {% include "findings/_cvss_result.html" %}
+    {% endwith %}
+    {% endif %}
+  </div>
+</div>
+</div>
+{% endblock %}
+

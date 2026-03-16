@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ report.title }}</title>
+<style>
+  :root {
+    --accent: #7c3aed;
+    --crit: #dc2626;
+    --high: #ea580c;
+    --med: #d97706;
+    --low: #2563eb;
+    --info: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1f2937; background: #fff; }
+  .page { max-width: 210mm; margin: 0 auto; padding: 20mm 25mm; }
+  @media print { .page { margin: 0; padding: 15mm 20mm; } @page { margin: 10mm; } }
+
+  /* ── Header ── */
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--accent); padding-bottom: 12px; margin-bottom: 28px; }
+  .company-name { font-size: 9pt; color: #6b7280; margin-top: 4px; }
+  .report-meta { text-align: right; font-size: 8pt; color: #9ca3af; }
+  .report-title { font-size: 22pt; font-weight: 700; color: #111827; margin-bottom: 2px; }
+  .logo-wrap img { max-height: 50px; max-width: 160px; }
+
+  /* ── Summary badges ── */
+  .summary-bar { display: flex; gap: 8px; margin-bottom: 24px; }
+  .summary-badge { flex: 1; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; text-align: center; }
+  .summary-badge .count { font-size: 20pt; font-weight: 700; }
+  .summary-badge .label { font-size: 8pt; color: #6b7280; text-transform: uppercase; }
+  .badge-total .count { color: #111827; }
+  .badge-critical .count { color: var(--crit); }
+  .badge-high .count { color: var(--high); }
+  .badge-medium .count { color: var(--med); }
+  .badge-low .count { color: var(--low); }
+
+  /* ── Section titles ── */
+  .section-title { font-size: 12pt; font-weight: 700; color: #111827; border-bottom: 1.5px solid #e5e7eb; padding-bottom: 4px; margin: 20px 0 10px; }
+
+  /* ── Executive summary ── */
+  .exec-summary { font-size: 10pt; line-height: 1.7; color: #374151; background: #f9fafb; border-left: 4px solid var(--accent); padding: 12px 14px; border-radius: 0 6px 6px 0; }
+
+  /* ── Severity pill ── */
+  .sev { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 8pt; font-weight: 700; color: #fff; }
+  .sev-critical { background: var(--crit); }
+  .sev-high { background: var(--high); }
+  .sev-medium { background: var(--med); }
+  .sev-low { background: var(--low); }
+  .sev-info { background: var(--info); }
+
+  /* ── Finding card ── */
+  .finding { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 18px; page-break-inside: avoid; overflow: hidden; }
+  .finding-header { padding: 10px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+  .finding-title { font-size: 11pt; font-weight: 600; color: #111827; }
+  .finding-url { font-size: 8pt; font-family: monospace; color: #6b7280; margin-top: 3px; word-break: break-all; }
+  .finding-body { padding: 12px 14px; }
+  .finding-body .meta-row { display: flex; gap: 20px; margin-bottom: 10px; font-size: 8pt; }
+  .meta-item .meta-key { color: #9ca3af; margin-bottom: 1px; }
+  .meta-item .meta-val { color: #374151; font-weight: 600; }
+
+  .field-label { font-size: 9pt; font-weight: 600; color: #374151; margin: 10px 0 4px; }
+  .field-val { font-size: 10pt; color: #1f2937; line-height: 1.6; white-space: pre-wrap; }
+  .evidence-block { background: #f3f4f6; border-radius: 4px; font-family: monospace; font-size: 8.5pt; padding: 10px 12px; color: #374151; white-space: pre-wrap; word-break: break-all; }
+  .remediation-block { background: #ecfdf5; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 0 4px 4px 0; font-size: 10pt; color: #064e3b; white-space: pre-wrap; line-height: 1.6; }
+
+  /* ── Risk matrix ── */
+  .risk-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  .risk-table th { text-align: center; padding: 5px; background: #f3f4f6; color: #6b7280; font-weight: 600; }
+  .risk-table td { text-align: center; padding: 5px; height: 32px; width: 60px; border: 1px solid #e5e7eb; }
+  .risk-red { background: #dc2626; color: #fff; font-weight: 700; }
+  .risk-orange { background: #ea580c; color: #fff; }
+  .risk-yellow { background: #d97706; color: #fff; }
+  .risk-green { background: #047857; color: #fff; }
+  .risk-grey { background: #e5e7eb; }
+
+  /* ── Footer ── */
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 8pt; color: #9ca3af; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  {# ── Page header ── #}
+  <div class="header">
+    <div>
+      {% if report.logo_base64 %}
+      <div class="logo-wrap"><img src="data:image/png;base64,{{ report.logo_base64 }}" alt="Logo"/></div>
+      {% endif %}
+      <div class="report-title">{{ report.title }}</div>
+      {% if report.company_name %}
+      <div class="company-name">{{ report.company_name }}{% if report.assessor_name %} · Assessor: {{ report.assessor_name }}{% endif %}</div>
+      {% endif %}
+    </div>
+    <div class="report-meta">
+      <div>{{ report.report_date|date:"F j, Y" }}</div>
+      <div>{{ report.project }}</div>
+      <div style="margin-top:6px;padding:3px 8px;background:#7c3aed;color:#fff;border-radius:4px;font-size:8pt;">CONFIDENTIAL</div>
+    </div>
+  </div>
+
+  {# ── Summary ── #}
+  <div class="summary-bar">
+    <div class="summary-badge badge-total"><div class="count">{{ total }}</div><div class="label">Total</div></div>
+    <div class="summary-badge badge-critical"><div class="count">{{ counts.critical|default:0 }}</div><div class="label">Critical</div></div>
+    <div class="summary-badge badge-high"><div class="count">{{ counts.high|default:0 }}</div><div class="label">High</div></div>
+    <div class="summary-badge badge-medium"><div class="count">{{ counts.medium|default:0 }}</div><div class="label">Medium</div></div>
+    <div class="summary-badge badge-low"><div class="count">{{ counts.low|default:0 }}</div><div class="label">Low</div></div>
+  </div>
+
+  {# ── Executive Summary ── #}
+  {% if report.executive_summary %}
+  <div class="section-title">Executive Summary</div>
+  <div class="exec-summary">{{ report.executive_summary }}</div>
+  {% endif %}
+
+  {# ── Risk Matrix ── #}
+  {% if risk_matrix %}
+  <div class="section-title">Risk Matrix</div>
+  <table class="risk-table">
+    <thead>
+      <tr>
+        <th style="text-align:right;padding-right:8px;">Impact ↓ / Likelihood →</th>
+        <th>Rare</th><th>Unlikely</th><th>Possible</th><th>Likely</th><th>Almost Certain</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row_label, row_data in risk_matrix.rows %}
+      <tr>
+        <th style="text-align:right;padding-right:8px;font-weight:600;">{{ row_label }}</th>
+        {% for cell in row_data %}
+        <td class="{% if cell.score >= 8 %}risk-red{% elif cell.score >= 6 %}risk-orange{% elif cell.score >= 4 %}risk-yellow{% elif cell.score >= 2 %}risk-green{% else %}risk-grey{% endif %}">
+          {% if cell.count %}{{ cell.count }}{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# ── Findings ── #}
+  <div class="section-title">Findings ({{ total }})</div>
+
+  {% for f in findings %}
+  <div class="finding">
+    <div class="finding-header">
+      <div>
+        <span class="sev sev-{{ f.severity }}">{{ f.severity|upper }}</span>
+        <span class="finding-title" style="margin-left:8px;">{{ f.title }}</span>
+        {% if f.url %}<div class="finding-url">{{ f.url }}</div>{% endif %}
+      </div>
+      {% if f.cvss_score %}<div style="font-size:9pt;color:#6b7280;">CVSS {{ f.cvss_score }}</div>{% endif %}
+    </div>
+    <div class="finding-body">
+      <div class="meta-row">
+        <div class="meta-item"><div class="meta-key">Status</div><div class="meta-val">{{ f.get_status_display }}</div></div>
+        {% if f.cwe_id %}<div class="meta-item"><div class="meta-key">CWE</div><div class="meta-val">{{ f.cwe_id }}</div></div>{% endif %}
+        {% if f.cvss_vector %}<div class="meta-item"><div class="meta-key">Vector</div><div class="meta-val" style="font-family:monospace;font-size:7.5pt;">{{ f.cvss_vector }}</div></div>{% endif %}
+      </div>
+
+      {% if f.description %}
+      <div class="field-label">Description</div>
+      <div class="field-val">{{ f.description }}</div>
+      {% endif %}
+
+      {% if f.evidence and report.include_evidence %}
+      <div class="field-label">Evidence</div>
+      <div class="evidence-block">{{ f.evidence }}</div>
+      {% endif %}
+
+      {% if f.impact %}
+      <div class="field-label">Impact</div>
+      <div class="field-val">{{ f.impact }}</div>
+      {% endif %}
+
+      {% if f.remediation and report.include_remediation %}
+      <div class="field-label">Remediation</div>
+      <div class="remediation-block">{{ f.remediation }}</div>
+      {% endif %}
+
+      {% if f.references %}
+      <div class="field-label">References</div>
+      <div class="field-val" style="font-size:9pt;color:#6b7280;">{{ f.references }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <p style="color:#9ca3af;font-style:italic;">No findings included in this report.</p>
+  {% endfor %}
+
+  {# ── Footer ── #}
+  <div class="footer">
+    Generated by PenTools &mdash; {{ report.title }} &mdash; {{ report.report_date|date:"Y-m-d" }}
+    &mdash; This report is confidential and intended for authorised recipients only.
+  </div>
+</div>
+</body>
+</html>

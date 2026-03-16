@@ -1,0 +1,72 @@
+{# templates/reports/_risk_matrix.html — include with risk_matrix context var #}
+{# risk_matrix = {matrix: {(1,1): count, ...}, row_labels: [...], col_labels: [...]} #}
+{% load pentools_tags %}
+<div class="overflow-x-auto">
+  <table class="w-full text-xs border-collapse">
+    <thead>
+      <tr>
+        <th class="p-0"></th>
+        {% for col in risk_matrix.col_labels %}
+        <th class="py-1 px-2 text-center text-gray-500 font-normal">{{ col }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row_idx in risk_matrix.row_range %}
+      <tr>
+        <td class="pr-2 text-gray-500 text-right whitespace-nowrap">{{ risk_matrix.row_labels|slice:row_idx }}</td>
+        {% for col_idx in risk_matrix.col_range %}
+        {% with cell_count=risk_matrix.matrix|default_if_none:0 %}
+        <td class="p-0.5" style="width:50px;height:40px;">
+          <div class="w-full h-full rounded flex items-center justify-center font-bold text-white/90
+            {% with r=row_idx c=col_idx score=row_idx|add:col_idx %}
+            {% if score >= 8 %}bg-red-600
+            {% elif score >= 6 %}bg-orange-500
+            {% elif score >= 4 %}bg-yellow-600
+            {% else %}bg-surface-hover{% endif %}
+            {% endwith %}">
+          </div>
+        </td>
+        {% endwith %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Simplified static heatmap when risk_matrix context is not detailed #}
+  {% if not risk_matrix.row_range %}
+  <div>
+    {% comment %}Fallback: render as 5x5 CSS grid{% endcomment %}
+    <div class="grid gap-0.5" style="grid-template-columns: 60px repeat(5, 1fr);">
+      <div></div>
+      <div class="text-center text-gray-600 text-xs py-1">Rare</div>
+      <div class="text-center text-gray-600 text-xs py-1">Unlikely</div>
+      <div class="text-center text-gray-600 text-xs py-1">Possible</div>
+      <div class="text-center text-gray-600 text-xs py-1">Likely</div>
+      <div class="text-center text-gray-600 text-xs py-1">Almost</div>
+      {# row: Critical, impact=5 #}
+      {% for row_label, impact in matrix_rows %}
+      <div class="text-right pr-1 text-gray-600 text-xs py-1 flex items-center justify-end">{{ row_label }}</div>
+      {% for col in matrix_cols %}
+      {% with score=impact|add:col.likelihood count=risk_matrix.matrix|get_item:row_label|default:0 %}
+      <div class="h-8 rounded flex items-center justify-center text-xs font-bold text-white/80
+        {% if score >= 8 %}bg-red-600/80
+        {% elif score >= 6 %}bg-orange-500/70
+        {% elif score >= 4 %}bg-yellow-600/60
+        {% elif score >= 2 %}bg-green-800/50
+        {% else %}bg-surface-hover{% endif %}">
+        {{ count|default:"" }}
+      </div>
+      {% endwith %}
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# Simpler visual fallback if neither row_range nor matrix_rows provided #}
+{% if not risk_matrix %}
+<div class="text-xs text-gray-600 italic">No risk matrix data available.</div>
+{% endif %}

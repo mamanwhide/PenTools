@@ -1,0 +1,111 @@
+{% extends "base/base.html" %}
+
+{% block title %}Schedule {{ module.name }} — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="mb-6">
+    <a href="{% url 'scans:schedule_list' %}" class="text-gray-400 hover:text-white text-sm">← Scheduled Scans</a>
+    <h1 class="text-2xl font-bold text-white mt-2">Schedule: {{ module.name }}</h1>
+    <p class="text-gray-400 text-sm mt-1">{{ module.description }}</p>
+  </div>
+
+  <form method="post" class="space-y-5">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1">Schedule Name</label>
+      <input type="text" name="schedule_name" placeholder="e.g. Daily subdomain check for acme.com"
+             class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent"
+             required>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1">Frequency</label>
+      <select name="schedule_freq"
+              class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent">
+        {% for value, label in schedule_choices %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Project</label>
+        <select name="project_id" id="project-select"
+                class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent">
+          <option value="">— None —</option>
+          {% for p in projects %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">Target</label>
+        <select name="target_id" id="target-select"
+                class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent">
+          <option value="">— None —</option>
+        </select>
+      </div>
+    </div>
+
+    <hr class="border-surface-border">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Module Parameters</h2>
+
+    {% for field in schema %}
+    <div>
+      <label class="block text-sm font-medium text-gray-300 mb-1">
+        {{ field.label }}{% if field.required %}<span class="text-red-400">*</span>{% endif %}
+      </label>
+      {% if field.type == "select" %}
+      <select name="{{ field.name }}"
+              class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent">
+        {% for opt in field.options %}
+        <option value="{{ opt.value }}" {% if opt.value == field.default %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      </select>
+      {% elif field.type == "boolean" %}
+      <input type="checkbox" name="{{ field.name }}" value="true" {% if field.default %}checked{% endif %}
+             class="rounded border-surface-border text-accent">
+      {% else %}
+      <input type="{{ field.type|default:'text' }}" name="{{ field.name }}"
+             value="{{ field.default|default:'' }}"
+             placeholder="{{ field.placeholder|default:'' }}"
+             {% if field.required %}required{% endif %}
+             class="w-full px-3 py-2 bg-surface-input border border-surface-border rounded-lg text-white text-sm focus:outline-none focus:border-accent">
+      {% endif %}
+      {% if field.description %}
+      <p class="text-xs text-gray-500 mt-1">{{ field.description }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="px-6 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors">
+        Create Schedule
+      </button>
+      <a href="{% url 'scans:schedule_list' %}"
+         class="px-6 py-2 border border-surface-border text-gray-400 hover:text-white text-sm rounded-lg transition-colors">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+const targetsByProject = {{ targets_by_project_json|safe }};
+document.getElementById('project-select').addEventListener('change', function() {
+  const sel = document.getElementById('target-select');
+  sel.innerHTML = '<option value="">— None —</option>';
+  const targets = targetsByProject[this.value] || [];
+  targets.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = `${t.name} (${t.value})`;
+    sel.appendChild(opt);
+  });
+});
+</script>
+{% endblock %}

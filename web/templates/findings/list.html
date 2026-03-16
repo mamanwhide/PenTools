@@ -1,0 +1,128 @@
+{% extends "base/base.html" %}
+{% block title %}Findings — PenTools{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-bold text-white">Findings</h1>
+    <p class="text-gray-500 text-xs mt-0.5">All findings across your projects</p>
+  </div>
+  <a href="{% url 'finding_create' %}"
+     class="px-4 py-2 bg-accent text-white rounded text-sm font-medium hover:bg-accent-hover transition">
+    + Manual Finding
+  </a>
+</div>
+
+{# ── Stats ── #}
+<div class="grid grid-cols-5 gap-3 mb-6">
+  {% with c=stats %}
+  <div class="bg-surface-card border border-surface-border rounded p-3 text-center">
+    <div class="text-2xl font-bold text-white">{{ c.total }}</div>
+    <div class="text-xs text-gray-500 mt-1">Total</div>
+  </div>
+  <div class="bg-surface-card border border-red-500/20 rounded p-3 text-center">
+    <div class="text-2xl font-bold text-red-400">{{ c.critical }}</div>
+    <div class="text-xs text-gray-500 mt-1">Critical</div>
+  </div>
+  <div class="bg-surface-card border border-orange-500/20 rounded p-3 text-center">
+    <div class="text-2xl font-bold text-orange-400">{{ c.high }}</div>
+    <div class="text-xs text-gray-500 mt-1">High</div>
+  </div>
+  <div class="bg-surface-card border border-yellow-500/20 rounded p-3 text-center">
+    <div class="text-2xl font-bold text-yellow-400">{{ c.medium }}</div>
+    <div class="text-xs text-gray-500 mt-1">Medium</div>
+  </div>
+  <div class="bg-surface-card border border-surface-border rounded p-3 text-center">
+    <div class="text-2xl font-bold text-green-400">{{ c.open }}</div>
+    <div class="text-xs text-gray-500 mt-1">Open</div>
+  </div>
+  {% endwith %}
+</div>
+
+{# ── Filters ── #}
+<form method="get" class="flex flex-wrap gap-2 mb-5">
+  <input name="q" value="{{ filters.q }}" placeholder="Search title / URL / CVE…"
+         class="bg-surface-card border border-surface-border rounded px-3 py-1.5 text-sm text-gray-300 w-64 focus:outline-none focus:border-accent">
+  <select name="severity" class="bg-surface-card border border-surface-border rounded px-2 py-1.5 text-sm text-gray-300">
+    <option value="">All Severities</option>
+    {% for val, label in severity_choices %}
+      <option value="{{ val }}" {% if filters.severity == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" class="bg-surface-card border border-surface-border rounded px-2 py-1.5 text-sm text-gray-300">
+    <option value="">All Statuses</option>
+    {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="project" class="bg-surface-card border border-surface-border rounded px-2 py-1.5 text-sm text-gray-300">
+    <option value="">All Projects</option>
+    {% for p in projects %}
+      <option value="{{ p.pk }}" {% if filters.project == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <label class="flex items-center gap-1.5 text-sm text-gray-400 cursor-pointer">
+    <input type="checkbox" name="manual" value="1" {% if filters.manual == "1" %}checked{% endif %} class="rounded border-surface-border">
+    Manual only
+  </label>
+  <button type="submit" class="px-3 py-1.5 bg-accent text-white rounded text-sm">Filter</button>
+  <a href="{% url 'finding_list' %}" class="px-3 py-1.5 border border-surface-border text-gray-400 rounded text-sm">Clear</a>
+</form>
+
+{# ── Table ── #}
+<div class="bg-surface-card border border-surface-border rounded overflow-hidden">
+  {% if page.object_list %}
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-surface-border text-gray-500 text-xs uppercase">
+        <th class="text-left px-4 py-2.5">Severity</th>
+        <th class="text-left px-4 py-2.5">Title</th>
+        <th class="text-left px-4 py-2.5">URL</th>
+        <th class="text-left px-4 py-2.5">Status</th>
+        <th class="text-left px-4 py-2.5">Project</th>
+        <th class="text-left px-4 py-2.5">Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in page %}
+      <tr class="border-b border-surface-border/50 hover:bg-surface-hover transition-colors cursor-pointer"
+          onclick="window.location='{% url 'finding_detail' f.pk %}'">
+        <td class="px-4 py-2.5">
+          <span class="px-2 py-0.5 rounded text-xs font-medium {{ f.severity_badge_class }}">
+            {{ f.severity|upper }}
+          </span>
+        </td>
+        <td class="px-4 py-2.5 text-white max-w-xs truncate font-medium">
+          {{ f.title|truncatechars:70 }}
+          {% if f.is_manual %}<span class="ml-1 text-xs text-accent">[manual]</span>{% endif %}
+        </td>
+        <td class="px-4 py-2.5 text-gray-400 max-w-xs truncate font-mono text-xs">{{ f.url|truncatechars:50 }}</td>
+        <td class="px-4 py-2.5">
+          <span class="text-xs text-gray-400 border border-surface-border px-2 py-0.5 rounded">{{ f.get_status_display }}</span>
+        </td>
+        <td class="px-4 py-2.5 text-gray-400 text-xs">{{ f.project.name|default:"—" }}</td>
+        <td class="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{{ f.created_at|date:"M d, Y" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {# Pagination #}
+  {% if page.has_other_pages %}
+  <div class="px-4 py-3 flex items-center gap-2 border-t border-surface-border">
+    {% if page.has_previous %}
+      <a href="?{% querystring page=page.previous_page_number %}" class="px-3 py-1 border border-surface-border rounded text-xs text-gray-400 hover:text-white">← Prev</a>
+    {% endif %}
+    <span class="text-xs text-gray-500">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+      <a href="?{% querystring page=page.next_page_number %}" class="px-3 py-1 border border-surface-border rounded text-xs text-gray-400 hover:text-white">Next →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="py-16 text-center text-gray-600">
+    <div class="text-4xl mb-3">🔍</div>
+    <p class="text-sm">No findings found.</p>
+    <a href="{% url 'finding_create' %}" class="mt-3 inline-block text-accent text-sm hover:underline">Add a manual finding</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

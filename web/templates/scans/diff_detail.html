@@ -1,0 +1,115 @@
+{% extends "base/base.html" %}
+
+{% block title %}Diff: {{ diff.module_id }} — VulnX{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <a href="{% url 'scans:diff_list' %}" class="text-gray-400 hover:text-white text-sm">← All Diffs</a>
+    <h1 class="text-2xl font-bold text-white mt-2">Diff Report: {{ diff.module_id }}</h1>
+    <p class="text-gray-400 text-sm mt-1">
+      Compared
+      <a href="{% url 'scans:detail' diff.baseline_job.id %}" class="text-accent-light hover:underline">baseline</a>
+      →
+      <a href="{% url 'scans:detail' diff.current_job.id %}" class="text-accent-light hover:underline">current</a>
+      · {{ diff.created_at|date:"Y-m-d H:i" }}
+    </p>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+      <div class="text-3xl font-bold text-red-400">+{{ diff.new_count }}</div>
+      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wide">New Findings</div>
+    </div>
+    <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+      <div class="text-3xl font-bold text-green-400">-{{ diff.resolved_count }}</div>
+      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wide">Resolved</div>
+    </div>
+    <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+      <div class="text-3xl font-bold text-gray-400">{{ diff.unchanged_count }}</div>
+      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wide">Unchanged</div>
+    </div>
+    <div class="bg-surface-card border border-surface-border rounded-xl p-4 text-center">
+      <div class="text-3xl font-bold text-orange-400">{{ diff.new_critical }}C / {{ diff.new_high }}H</div>
+      <div class="text-xs text-gray-400 mt-1 uppercase tracking-wide">New Crit/High</div>
+    </div>
+  </div>
+
+  <!-- New findings -->
+  {% if diff.diff_data.new %}
+  <div class="mb-8">
+    <h2 class="text-lg font-bold text-red-400 mb-3">
+      <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>New Findings ({{ diff.diff_data.new|length }})
+    </h2>
+    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="border-b border-surface-border">
+          <tr class="text-gray-400 text-xs uppercase">
+            <th class="px-4 py-3 text-left">Title</th>
+            <th class="px-4 py-3 text-left">Severity</th>
+            <th class="px-4 py-3 text-left">URL</th>
+            <th class="px-4 py-3 text-left">CVE</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-border">
+          {% for f in diff.diff_data.new %}
+          <tr class="hover:bg-surface-hover">
+            <td class="px-4 py-3 text-white font-medium">{{ f.title }}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs
+                {% if f.severity == 'critical' %}bg-red-500/20 text-red-400
+                {% elif f.severity == 'high' %}bg-orange-500/20 text-orange-400
+                {% elif f.severity == 'medium' %}bg-yellow-500/20 text-yellow-400
+                {% else %}bg-gray-500/20 text-gray-400{% endif %}">
+                {{ f.severity }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-gray-400 text-xs truncate max-w-xs">{{ f.url|truncatechars:80 }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-accent-light">{{ f.cve_id|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Resolved findings -->
+  {% if diff.diff_data.resolved %}
+  <div>
+    <h2 class="text-lg font-bold text-green-400 mb-3">
+      <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>Resolved Findings ({{ diff.diff_data.resolved|length }})
+    </h2>
+    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="border-b border-surface-border">
+          <tr class="text-gray-400 text-xs uppercase">
+            <th class="px-4 py-3 text-left">Title</th>
+            <th class="px-4 py-3 text-left">Severity</th>
+            <th class="px-4 py-3 text-left">URL</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-border">
+          {% for f in diff.diff_data.resolved %}
+          <tr class="hover:bg-surface-hover opacity-60">
+            <td class="px-4 py-3 text-gray-400 line-through">{{ f.title }}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs bg-gray-500/20 text-gray-500">{{ f.severity }}</span>
+            </td>
+            <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-xs">{{ f.url|truncatechars:80 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not diff.diff_data.new and not diff.diff_data.resolved %}
+  <div class="text-center py-12 text-gray-500">
+    <p>No changes detected between these two scans.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
