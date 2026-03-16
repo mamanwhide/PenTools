@@ -1,0 +1,66 @@
+X-Forwarded-For: 127.0.0.1
+X-Forwarded-For: localhost
+X-Forwarded-For: ::1
+X-Forwarded-Host: localhost
+X-Forwarded-Host: attacker.com
+X-Forwarded-Proto: https
+X-Real-IP: 127.0.0.1
+X-Real-IP: localhost
+X-Remote-IP: 127.0.0.1
+X-Remote-Addr: 127.0.0.1
+X-Client-IP: 127.0.0.1
+X-Originating-IP: 127.0.0.1
+X-Host: localhost
+X-Custom-IP-Authorization: 127.0.0.1
+X-Original-URL: /admin
+X-Rewrite-URL: /admin
+X-Override-URL: /admin
+X-Requested-With: XMLHttpRequest
+X-HTTP-Method-Override: PUT
+X-HTTP-Method-Override: DELETE
+X-HTTP-Method-Override: PATCH
+X-Method-Override: DELETE
+X-Forwarded-Method: DELETE
+X-Original-Method: DELETE
+X-HTTP-Method: DELETE
+X-Forwarded-Port: 443
+X-Forwarded-Port: 80
+X-Forwarded-Server: localhost
+X-Forwarded-Server: attacker.com
+X-Frame-Options: ALLOW
+X-Content-Type-Options: nosniff
+Origin: null
+Origin: http://localhost
+Origin: https://localhost
+Origin: http://attacker.com
+Origin: https://attacker.com
+Origin: http://127.0.0.1
+Referer: http://localhost/admin
+Referer: https://localhost/admin
+Referer: http://attacker.com
+Authorization: Bearer FUZZ
+Authorization: Basic YWRtaW46YWRtaW4=
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Cookie: session=FUZZ
+Cookie: auth=FUZZ
+Cookie: token=FUZZ
+Cookie: admin=1
+Cookie: isAdmin=true
+Cookie: role=admin
+Cookie: debug=true
+Cookie: test=1
+User-Agent: Mozilla/5.0 FUZZ
+User-Agent: <script>alert(1)</script>
+User-Agent: ' OR '1'='1
+Content-Type: application/json
+Content-Type: application/xml
+Content-Type: text/xml
+Content-Type: multipart/form-data
+Content-Type: application/x-www-form-urlencoded
+Content-Type: application/octet-stream
+Accept: */*
+Accept: application/json,*/*
+Accept-Language: en-US,*
+Accept-Encoding: gzip, deflate, br
+Cache-Control: no-cache
+Pragma: no-cache

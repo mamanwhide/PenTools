@@ -11,6 +11,8 @@ RUN apk add --no-cache \
     openssl libssl3 ca-certificates \
     build-base libffi-dev \
     libpcap-dev \
+    libxml2-dev libxslt-dev \
+    c-ares-dev \
     nodejs npm \
     exiftool \
     && rm -rf /var/cache/apk/*
@@ -100,12 +102,11 @@ RUN CGO_ENABLED=1 go install github.com/projectdiscovery/naabu/v2/cmd/naabu@late
 RUN find /usr/lib -name 'libpcap.so.1.*' | head -1 | xargs -I{} cp {} /opt/tools/lib/ && \
     ln -sf "$(ls /opt/tools/lib/libpcap.so.1.* 2>/dev/null | head -1)" /opt/tools/lib/libpcap.so.1 || true
 
-# Install rustscan (pinned to last stable release — latest can break with Rust API changes)
+# Install rustscan — latest stable via cargo (no version pin to avoid crates.io mismatches)
 FROM base AS rust-tools
-RUN apk add --no-cache rust cargo && \
+RUN apk add --no-cache rust cargo openssl-dev && \
     mkdir -p /opt/tools/bin && \
-    cargo install rustscan --version 2.3.0 --root /opt/tools 2>/dev/null || \
-    cargo install rustscan --root /opt/tools 2>/dev/null || true
+    cargo install rustscan --root /opt/tools 2>&1 | tail -5 || true
 
 # Final image
 FROM base
@@ -118,11 +119,17 @@ COPY --from=rust-tools /opt/tools/bin /opt/tools/bin
 RUN pip3 install --no-cache-dir --break-system-packages wafw00f    2>/dev/null || true
 RUN pip3 install --no-cache-dir --break-system-packages sqlmap      2>/dev/null || true
 RUN pip3 install --no-cache-dir --break-system-packages droopescan  2>/dev/null || true
-# theHarvester: needs specific deps; install with fallback
-RUN pip3 install --no-cache-dir --break-system-packages theHarvester 2>/dev/null || \
-    pip3 install --no-cache-dir --break-system-packages git+https://github.com/laramies/theHarvester.git 2>/dev/null || true
-# wapiti3 — large dependency tree; install separately
-RUN pip3 install --no-cache-dir --break-system-packages wapiti3 2>/dev/null || true
+# theHarvester: needs aiodns (c-ares), dnspython, aiohttp — system deps in base
+# Upgrade pip+wheel first so native extensions compile correctly on Alpine
+RUN pip3 install --no-cache-dir --break-system-packages --upgrade pip setuptools wheel 2>/dev/null || true
+RUN pip3 install --no-cache-dir --break-system-packages theHarvester 2>&1 | tail -3 || \
+    pip3 install --no-cache-dir --break-system-packages \
+        aiodns dnspython aiohttp requests netaddr shodan censys \
+        git+https://github.com/laramies/theHarvester.git 2>&1 | tail -3 || \
+    echo '[theHarvester] install FAILED — skipping'
+# wapiti3 — needs lxml (libxml2/libxslt in base), aiohttp; install separately
+RUN pip3 install --no-cache-dir --break-system-packages wapiti3 2>&1 | tail -3 || \
+    echo '[wapiti3] install FAILED — skipping'
 # Install hashcat via apk (GPU password cracker; --cpu-only flag works without GPU)
 RUN apk add --no-cache hashcat 2>/dev/null || true
 
@@ -140,11 +147,12 @@ RUN git clone --depth=1 https://github.com/drwetter/testssl.sh.git /opt/tools/te
     ln -s /opt/tools/testssl/testssl.sh /opt/tools/bin/testssl.sh
 
 # massdns: high-performance DNS resolver (puredns dependency + standalone use)
-# Compiled from source. Ensure build deps are present and use make install.
-RUN apk add --no-cache make 2>/dev/null || true && \
-    git clone --depth=1 https://github.com/blechschmidt/massdns.git /tmp/massdns && \
-    cd /tmp/massdns && make && cp bin/massdns /opt/tools/bin/massdns && \
-    rm -rf /tmp/massdns || true
+# build-base (already in base stage) provides gcc + make. Compile from source.
+RUN git clone --depth=1 https://github.com/blechschmidt/massdns.git /tmp/massdns 2>&1 && \
+    cd /tmp/massdns && make 2>&1 && \
+    cp bin/massdns /opt/tools/bin/massdns && \
+    rm -rf /tmp/massdns && \
+    echo '[massdns] installed OK' || echo '[massdns] build FAILED — skipping'
 
 # Pull nuclei templates into the shared volume path so they are available
 # to web/celery containers. HOME=/opt/tools makes nuclei store templates at
@@ -172,15 +180,22 @@ RUN HOME=/opt/tools && \
 # that tools write at runtime into the shared volume.
 RUN chmod -R o+rwX /opt/tools
 
-# Copy built-in wordlists
-COPY wordlists/ /wordlists/
+# Copy built-in wordlists into the container image (also available via bind mount at runtime)
+COPY wordlists/ /opt/tools/wordlists/
 
-# Download minimal wordlists if not included
-RUN mkdir -p /wordlists/common && \
-    wget -q -O /wordlists/common/directory.txt \
+# Download minimal seclists fallback wordlists if not included
+RUN mkdir -p /opt/tools/wordlists/common && \
+    wget -q -O /opt/tools/wordlists/common/directory.txt \
     https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/directory-list-2.3-small.txt 2>/dev/null || true
 
 ENV PATH="/opt/tools/bin:${PATH}"
 
-# The container just ensures binaries exist in the shared volume, then exits
-CMD ["sh", "-c", "echo '[pentools-tools] All tools installed in /opt/tools/bin' && ls /opt/tools/bin/"]
+# The container copies all built binaries and config into the shared tools_bin volume,
+# then prints a manifest. The entrypoint syncs /opt/tools-image/ → /opt/tools/ so
+# new tools overwrite whatever was previously in the volume.
+RUN cp -r /opt/tools /opt/tools-image
+
+CMD ["sh", "-c", \
+  "echo '[pentools-tools] Syncing tools into shared volume...' && \
+   find /opt/tools-image -maxdepth 1 -mindepth 1 ! -name 'wordlists' -exec cp -rf {} /opt/tools/ \\; && \
+   echo '[pentools-tools] Done. Installed:' && ls /opt/tools/bin/"]

