@@ -90,9 +90,13 @@ def execute_module(self, job_id: str):
         self.stream(job_id, "error", f"Parameter validation failed: {e}")
         return
 
-    # Build a stream callable for the module to use
-    def stream_fn(level: str, message: str):
-        self.stream(job_id, level, message)
+    # Build a stream callable for the module to use.
+    # Accepts both single-arg stream("message") and two-arg stream("level", "message") patterns.
+    def stream_fn(level_or_msg: str, message: str = None):
+        if message is None:
+            self.stream(job_id, "info", level_or_msg)
+        else:
+            self.stream(job_id, level_or_msg, message)
 
     try:
         result = module.execute(params=params, job_id=job_id, stream=stream_fn)

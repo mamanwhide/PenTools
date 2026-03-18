@@ -122,11 +122,16 @@ class BaseModule(ABC):
         Raises ValueError with details on first validation failure.
         Returns cleaned params dict.
         """
+        # Field types that should never be None — normalise to "" when optional and unset.
+        _TEXT_TYPES = {"text", "textarea", "url", "json_editor", "code_editor", "password", "hidden"}
         cleaned = {}
         for f in self.PARAMETER_SCHEMA:
             value = params.get(f.key, f.default)
             if f.required and (value is None or value == ""):
                 raise ValueError(f"Field '{f.label}' is required.")
+            # Prevent downstream AttributeError when modules call .strip() on optional fields
+            if value is None and f.field_type in _TEXT_TYPES:
+                value = f.default if f.default is not None else ""
             cleaned[f.key] = value
         return cleaned
 

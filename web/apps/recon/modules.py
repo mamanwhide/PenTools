@@ -1192,8 +1192,9 @@ class ASNIntelligenceModule(BaseModule):
         return results
 
     def execute(self, params: dict, job_id: str, stream) -> dict:
+        import os as _os
         raw_targets = [t.strip() for t in params["targets"].splitlines() if t.strip()]
-        shodan_key = params.get("shodan_api_key", "").strip()
+        shodan_key = (params.get("shodan_api_key") or "").strip() or _os.environ.get("SHODAN_API_KEY", "").strip()
         resolve_rdns = params.get("resolve_rdns", True)
         findings = []
         raw_lines = []
@@ -2206,9 +2207,10 @@ class ShodanCensysQueryModule(BaseModule):
         import re
 
         query = params["query"].strip()
+        import os as _os
         providers = params.get("providers", ["shodan"])
-        shodan_key = params.get("shodan_api_key", "").strip()
-        censys_id = params.get("censys_api_id", "").strip()
+        shodan_key = (params.get("shodan_api_key") or "").strip() or _os.environ.get("SHODAN_API_KEY", "").strip()
+        censys_id = (params.get("censys_api_id") or "").strip()
         censys_secret = params.get("censys_api_secret", "").strip()
         facets = params.get("facets", ["ports", "org", "country"])
         max_results = int(params.get("max_results", 20))

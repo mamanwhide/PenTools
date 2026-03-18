@@ -40,6 +40,26 @@ class Report(models.Model):
     assessor_name = models.CharField(max_length=200, blank=True)
     report_date = models.DateField(null=True, blank=True)
 
+    # Engagement metadata
+    engagement_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("black-box", "Black-Box"),
+            ("grey-box",  "Grey-Box"),
+            ("white-box", "White-Box"),
+            ("hybrid",    "Hybrid"),
+        ],
+        default="black-box",
+    )
+    methodology_notes = models.TextField(
+        blank=True,
+        help_text="Testing approach & methodology description (appended to Section 2)",
+    )
+    scope_notes = models.TextField(
+        blank=True,
+        help_text="Additional Scope of Work context (appended to Section 3)",
+    )
+
     # Options
     include_graph_png = models.BooleanField(default=False)
     include_evidence = models.BooleanField(default=True)

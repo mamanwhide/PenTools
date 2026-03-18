@@ -75,6 +75,9 @@ def report_create(request):
             include_evidence="include_evidence" in data,
             include_remediation="include_remediation" in data,
             min_severity=data.get("min_severity", "info"),
+            engagement_type=data.get("engagement_type", "black-box"),
+            methodology_notes=data.get("methodology_notes", "").strip(),
+            scope_notes=data.get("scope_notes", "").strip(),
             created_by=request.user,
         )
 
@@ -147,6 +150,9 @@ def report_builder_save(request, pk):
     report.include_evidence = "include_evidence" in data
     report.include_remediation = "include_remediation" in data
     report.min_severity = data.get("min_severity", report.min_severity)
+    report.engagement_type = data.get("engagement_type", report.engagement_type)
+    report.methodology_notes = data.get("methodology_notes", report.methodology_notes).strip()
+    report.scope_notes = data.get("scope_notes", report.scope_notes).strip()
 
     # Ordered finding IDs from POST
     ids_raw = data.get("finding_ids", "[]")
@@ -187,15 +193,34 @@ def report_generate(request, pk):
 @login_required
 def report_detail(request, pk):
     report = _user_report(request.user, pk)
-    from apps.reports.generators import _get_findings, _count_by_severity, build_risk_matrix
-    findings = _get_findings(report)
-    counts = _count_by_severity(findings)
-    risk_matrix = build_risk_matrix(report)
+    from apps.reports.generators import (
+        _get_findings, _count_by_severity, build_risk_matrix,
+        _get_methodology, _get_sow_targets, _build_wstg_with_coverage, FindingWrapper,
+    )
+    findings_raw = _get_findings(report)
+    findings     = [FindingWrapper(f, i + 1) for i, f in enumerate(findings_raw)]
+    counts       = _count_by_severity(findings_raw)
+    risk_matrix  = build_risk_matrix(report)
+    methodology  = _get_methodology(report)
+    targets      = _get_sow_targets(report)
+    wstg         = _build_wstg_with_coverage(methodology)
+    max_count    = max(counts.values()) if any(counts.values()) else 1
+    severity_bars = [
+        {"sev": sev, "cnt": counts.get(sev, 0), "pct": int(counts.get(sev, 0) / max_count * 100)}
+        for sev in ("critical", "high", "medium", "low", "info")
+    ]
     return render(request, "reports/detail.html", {
-        "report": report,
-        "findings": findings,
-        "counts": counts,
-        "risk_matrix": risk_matrix,
+        "report":            report,
+        "findings":          findings,
+        "counts":            counts,
+        "risk_matrix":       risk_matrix,
+        "methodology":       methodology,
+        "targets":           targets,
+        "wstg_playbook":     wstg,
+        "severity_bars":     severity_bars,
+        "engagement_type":   getattr(report, "engagement_type", "black-box"),
+        "methodology_notes": getattr(report, "methodology_notes", ""),
+        "scope_notes":       getattr(report, "scope_notes", ""),
     })
 
 
