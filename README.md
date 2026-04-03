@@ -1,6 +1,6 @@
 # PenTools
 
-**PenTools** is a self-hosted, web-based penetration testing platform built on Django 5.1, Celery, Django Channels, and PostgreSQL. It provides 135 security testing modules covering every major OWASP category — including native OWASP ZAP integration for spider, passive, and active scanning — a real-time scan console over WebSocket, structured finding management with CVSS 3.1 scoring, professional PDF/HTML report generation, and an interactive attack graph per project.
+**PenTools** is a self-hosted, web-based penetration testing platform built on Django 5.1, Celery, Django Channels, and PostgreSQL. It provides 135 security testing modules covering every major OWASP category, including native OWASP ZAP integration for spider, passive, and active scanning, a real-time scan console over WebSocket, structured finding management with CVSS 3.1 scoring, PDF/HTML report generation, and an interactive attack graph per project.
 
 ---
 
