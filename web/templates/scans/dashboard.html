@@ -62,7 +62,10 @@
             {% if job.high_count %}
             <span class="px-1.5 py-0.5 rounded bg-high/10 border border-high/30 text-high font-mono text-[10px]">H:{{ job.high_count }}</span>
             {% endif %}
-            {% if not job.critical_count and not job.high_count %}
+            {% if job.medium_count %}
+            <span class="px-1.5 py-0.5 rounded bg-warn/10 border border-warn/30 text-warn font-mono text-[10px]">M:{{ job.medium_count }}</span>
+            {% endif %}
+            {% if not job.critical_count and not job.high_count and not job.medium_count %}
             <span class="text-gray-600 font-mono">{{ job.finding_count|default:"0" }}</span>
             {% endif %}
           </div>

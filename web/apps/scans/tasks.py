@@ -121,7 +121,10 @@ def execute_module(self, job_id: str):
 
     # Save findings
     findings = result.get("findings", [])
-    _save_findings(job, findings)
+    try:
+        _save_findings(job, findings)
+    except Exception as save_exc:
+        self.stream(job_id, "warning", f"Findings save error (findings may be partial): {save_exc}")
 
     # Finalize job
     job.status = ScanJob.Status.DONE if result.get("status") != "failed" else ScanJob.Status.FAILED
@@ -130,7 +133,11 @@ def execute_module(self, job_id: str):
     job.finding_count = len(findings)
     job.critical_count = sum(1 for f in findings if f.get("severity") == "critical")
     job.high_count = sum(1 for f in findings if f.get("severity") == "high")
-    job.save(update_fields=["status", "finished_at", "progress", "finding_count", "critical_count", "high_count"])
+    job.medium_count = sum(1 for f in findings if f.get("severity") == "medium")
+    job.low_count = sum(1 for f in findings if f.get("severity") == "low")
+    job.info_count = sum(1 for f in findings if f.get("severity") == "info")
+    job.save(update_fields=["status", "finished_at", "progress", "finding_count",
+                            "critical_count", "high_count", "medium_count", "low_count", "info_count"])
 
     duration = job.duration_seconds
     self.stream(job_id, "success", f"Scan complete. {len(findings)} findings. Duration: {duration}s")
@@ -151,6 +158,10 @@ def execute_module(self, job_id: str):
     if job.status == ScanJob.Status.DONE:
         _trigger_scan_chains(job, metadata, self)
 
+    # 3. Auto-register discovered subdomains as project targets
+    if job.status == ScanJob.Status.DONE:
+        _auto_add_targets(job, metadata, self)
+
     # Notify the project graph channel so live graph viewers see new nodes
     if job.project_id:
         _push_ws(
@@ -165,15 +176,31 @@ def execute_module(self, job_id: str):
         )
 
 
+def _strip_nul(s: str) -> str:
+    """Remove NUL bytes that PostgreSQL rejects in string columns."""
+    return s.replace("\x00", "") if isinstance(s, str) else s
+
+
+def _sanitize_json(obj):
+    """Recursively strip NUL bytes from all string values in a JSON-serialisable object."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_json(v) for v in obj]
+    if isinstance(obj, str):
+        return _strip_nul(obj)
+    return obj
+
+
 def _save_findings(job, findings: list[dict]):
     from apps.results.models import Finding
     import hashlib
 
     objs = []
     for f in findings:
-        title    = f.get("title", "Untitled")
-        url      = f.get("url", "")
-        evidence = f.get("evidence", "")
+        title    = _strip_nul(f.get("title", "Untitled"))
+        url      = _strip_nul(f.get("url", ""))
+        evidence = _strip_nul(f.get("evidence", ""))
         raw_hash = f"{title}|{url}|{evidence[:200]}"
         ev_hash  = hashlib.sha256(raw_hash.encode()).hexdigest()
 
@@ -186,14 +213,14 @@ def _save_findings(job, findings: list[dict]):
             title=title,
             severity=f.get("severity", "info"),
             url=url,
-            description=f.get("description", ""),
+            description=_strip_nul(f.get("description", "")),
             evidence=evidence,
             evidence_hash=ev_hash,
-            remediation=f.get("remediation", ""),
+            remediation=_strip_nul(f.get("remediation", "")),
             cvss_score=f.get("cvss_score"),
-            cve_id=f.get("cve_id", ""),
-            cwe_id=f.get("cwe_id", ""),
-            raw_data=f,
+            cve_id=_strip_nul(f.get("cve_id", "")),
+            cwe_id=_strip_nul(f.get("cwe_id", "")),
+            raw_data=_sanitize_json(f),
         ))
     if objs:
         Finding.objects.bulk_create(objs, ignore_conflicts=True)
@@ -268,7 +295,69 @@ def _generate_diff_report(current_job, current_findings: list[dict]):
         pass  # Diff report is non-critical; never crash the main task
 
 
+# ─── Auto Target Discovery ────────────────────────────────────────────────────
+# Modules that return a 'subdomains' list in metadata
+_SUBDOMAIN_MODULES = {"R-02", "R-07"}
+
+
+def _auto_add_targets(job, metadata: dict, task_self):
+    """
+    After subdomain-discovery modules complete successfully, automatically
+    add all discovered subdomains as Target entries linked to the project.
+
+    Uses get_or_create against the (project, value) unique_together constraint
+    so repeated scans are idempotent — no duplicates are ever inserted.
+    """
+    if job.module_id not in _SUBDOMAIN_MODULES:
+        return
+    if not job.project_id:
+        return
+
+    subdomains = metadata.get("subdomains", [])
+    if not subdomains:
+        return
+
+    from apps.targets.models import Target
+
+    try:
+        project = job.project
+        created_count = 0
+        for sub in subdomains:
+            sub = sub.strip().lower()
+            if not sub:
+                continue
+            _, created = Target.objects.get_or_create(
+                project=project,
+                value=sub,
+                defaults={
+                    "name": sub,
+                    "target_type": Target.TargetType.DOMAIN,
+                    "is_in_scope": True,
+                    "created_by": job.created_by,
+                    "description": f"Auto-discovered by {job.module_id} — {job.id}",
+                    "tags": ["auto-discovered", job.module_id.lower()],
+                },
+            )
+            if created:
+                created_count += 1
+
+        if created_count:
+            task_self.stream(
+                str(job.id), "success",
+                f"[auto-targets] {created_count} new subdomain(s) added to project ‘{project.name}’.",
+            )
+        else:
+            task_self.stream(
+                str(job.id), "info",
+                f"[auto-targets] All {len(subdomains)} discovered subdomain(s) already in ‘{project.name}’ target list.",
+            )
+    except Exception as exc:
+        # Non-critical — log but never fail the parent scan task
+        task_self.stream(str(job.id), "warning", f"[auto-targets] Could not add targets: {exc}")
+
+
 # ─── Scan Chain Dispatcher ────────────────────────────────────────────────────
+
 
 def _trigger_scan_chains(parent_job, metadata: dict, task_self):
     """

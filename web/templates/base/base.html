@@ -1,38 +1,41 @@
 <!DOCTYPE html>
-<html lang="en" class="dark h-full">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}VulnX PenTools{% endblock %}</title>
 
-  <!-- Apply saved theme before first paint to prevent FOUC -->
+  <!-- Prevent FOUC: apply theme class before first paint -->
   <script>
     (function(){
-      var t = localStorage.getItem('pentools-theme') || 'dark';
-      if (t === 'light') document.documentElement.classList.add('theme-light');
+      var t=localStorage.getItem('pt-theme')||'dark';
+      document.documentElement.setAttribute('data-theme',t);
     })();
   </script>
 
   <script>
     tailwind.config = {
-      darkMode: 'class',
+      darkMode: ['attribute','[data-theme="dark"]'],
       theme: {
         extend: {
           colors: {
             surface: {
-              DEFAULT: '#09090d',
-              card:    '#0f1016',
-              border:  '#1c1e2e',
-              hover:   '#13141f',
+              DEFAULT: 'var(--bg)',
+              card:    'var(--bg-card)',
+              border:  'var(--border)',
+              hover:   'var(--bg-hover)',
             },
-            accent: { DEFAULT: '#7c3aed', hover: '#6d28d9', muted: '#4c1d95' },
+            accent:   { DEFAULT:'var(--accent)', hover:'var(--accent-hover)' },
             critical: '#ef4444',
             high:     '#f97316',
             warn:     '#eab308',
             ok:       '#22c55e',
             info:     '#38bdf8',
           },
-          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'monospace'] },
+          fontFamily: {
+            sans: ['Inter','system-ui','-apple-system','sans-serif'],
+            mono: ['JetBrains Mono','Fira Code','monospace'],
+          },
         }
       }
     }
@@ -41,454 +44,549 @@
   <script defer src="https://unpkg.com/@alpinejs/collapse@3.14.8/dist/cdn.min.js"></script>
   <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/htmx.org@2.0.3/dist/htmx.min.js"></script>
-  <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── Theme variables ─────────────────────────────────────────────────── */
-    :root {
-      --surface: #09090d;
-      --surface-card: #0f1016;
-      --surface-border: #1c1e2e;
-      --surface-hover: #13141f;
-    }
-    html.theme-light {
-      --surface: #f1f5f9;
-      --surface-card: #ffffff;
-      --surface-border: #e2e8f0;
-      --surface-hover: #f8fafc;
-    }
+/* ═══════════════════════ DESIGN TOKENS ═══════════════════════ */
+:root,[data-theme="dark"] {
+  --bg:          #0d1117;
+  --bg-card:     #161b22;
+  --bg-elevated: #1f2937;
+  --bg-hover:    #1c2128;
+  --border:      #21262d;
+  --border-muted:#30363d;
+  --text-1:      #e6edf3;
+  --text-2:      #c9d1d9;
+  --text-3:      #8b949e;
+  --text-4:      #484f58;
+  --accent:      #0ea5e9;
+  --accent-hover:#0284c7;
+  --sidebar-w:   220px;
+  --sidebar-collapsed: 52px;
+  --topbar-h:    48px;
+}
 
-    /* ── Light mode overrides ──────────────────────────────────────────── */
-    html.theme-light body {
-      background: var(--surface) !important;
-      color: #0f172a !important;
-    }
-    html.theme-light body::-webkit-scrollbar-thumb { background: #cbd5e1; }
-    /* Surface backgrounds */
-    html.theme-light .bg-surface    { background-color: var(--surface)      !important; }
-    html.theme-light .bg-surface-card   { background-color: var(--surface-card)   !important; }
-    html.theme-light .bg-surface-border { background-color: var(--surface-hover)  !important; }
-    html.theme-light .bg-surface-hover  { background-color: var(--surface-hover)  !important; }
-    html.theme-light .border-surface-border { border-color: var(--surface-border) !important; }
-    /* Flash messages in light mode */
-    html.theme-light .bg-surface-card\/95 { background-color: rgba(255,255,255,0.97) !important; }
-    html.theme-light .bg-surface-border\/60 { background-color: rgba(226,232,240,0.8) !important; }
-    /* Text shades — invert for light */
-    html.theme-light .text-white  { color: #0f172a !important; }
-    html.theme-light .text-gray-200 { color: #111827 !important; }
-    html.theme-light .text-gray-300 { color: #1e293b !important; }
-    html.theme-light .text-gray-400 { color: #374151 !important; }
-    html.theme-light .text-gray-500 { color: #64748b !important; }
-    html.theme-light .text-gray-600 { color: #4b5563 !important; }
-    html.theme-light .text-gray-700 { color: #374151 !important; }
-    html.theme-light .hover\:text-white:hover  { color: #0f172a !important; }
-    html.theme-light .hover\:text-gray-200:hover { color: #111827 !important; }
-    html.theme-light .hover\:text-gray-300:hover { color: #1e293b !important; }
-    html.theme-light .hover\:text-gray-200:hover { color: #111827 !important; }
-    html.theme-light .hover\:bg-surface-border:hover { background-color: var(--surface-hover) !important; }
-    /* Shadow in light mode */
-    html.theme-light .shadow-2xl { box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important; }
-    /* Nav active pill */
-    html.theme-light .nav-active { background-color: rgba(124,58,237,0.08) !important; }
-    html.theme-light .nav-active::before { background: #7c3aed; }
-    html.theme-light .nav-active .text-white { color: #1e293b !important; }
-    /* Log colors stay for scan output */
-    html.theme-light .log-info { color: #64748b; }
-    /* Form inputs in light mode */
-    html.theme-light input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=button]):not([type=file]):not([type=image]),
-    html.theme-light select,
-    html.theme-light textarea {
-      background: #f8fafc !important;
-      color: #0f172a !important;
-      border-color: #cbd5e1 !important;
-    }
-    html.theme-light input::placeholder,
-    html.theme-light textarea::placeholder { color: #94a3b8 !important; }
-    html.theme-light select option { background: #f8fafc; color: #0f172a; }
-    html.theme-light input:-webkit-autofill,
-    html.theme-light input:-webkit-autofill:focus {
-      -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
-      -webkit-text-fill-color: #0f172a !important;
-    }
-    /* Scrollbar light */
-    html.theme-light ::-webkit-scrollbar-thumb { background: #cbd5e1; }
-    html.theme-light ::-webkit-scrollbar-track { background: transparent; }
-    /* Theme toggle button */
-    .btn-theme-toggle {
-      display: flex; align-items: center; justify-content: center;
-      width: 28px; height: 28px; border-radius: 6px;
-      border: 1px solid #1c1e2e;
-      background: transparent; cursor: pointer;
-      color: #4b5563; transition: color .15s, border-color .15s, background .15s;
-    }
-    .btn-theme-toggle:hover { color: #d1d5db; border-color: #374151; background: #13141f; }
-    html.theme-light .btn-theme-toggle { border-color: #e2e8f0; color: #64748b; }
-    html.theme-light .btn-theme-toggle:hover { color: #111827; border-color: #94a3b8; background: #f1f5f9; }
+[data-theme="light"] {
+  --bg:          #f6f8fa;
+  --bg-card:     #ffffff;
+  --bg-elevated: #eaeef2;
+  --bg-hover:    #f3f4f6;
+  --border:      #d0d7de;
+  --border-muted:#c8d1da;
+  --text-1:      #1f2328;
+  --text-2:      #2d333b;
+  --text-3:      #636c76;
+  --text-4:      #8c959f;
+  --accent:      #0284c7;
+  --accent-hover:#0369a1;
+}
 
-    [x-cloak] { display: none !important; }
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body { background: #09090d; color: #d1d5db; font-size: 13px; line-height: 1.6; }
+/* ═══════════════════════ RESET & BASE ═══════════════════════ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg);
+  color:var(--text-2);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:13px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
 
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #1c1e2e; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #2a2d40; }
+/* ═══════════════════════ SCROLLBAR ═══════════════════════ */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-muted)}
 
-    /* Log console lines */
-    .log-line { font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7; padding: 1px 0; display: flex; gap: 8px; }
-    .log-error   { color: #f87171; }
-    .log-warning { color: #fbbf24; }
-    .log-success { color: #4ade80; }
-    .log-info    { color: #64748b; }
+/* ═══════════════════════ TOP BAR ═══════════════════════ */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  height:var(--topbar-h);
+  display:flex;align-items:center;
+  background:var(--bg-card);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
 
-    /* Sidebar active indicator */
-    .nav-active { position: relative; }
-    .nav-active::before {
-      content: '';
-      position: absolute;
-      left: -2px; top: 25%; bottom: 25%;
-      width: 3px;
-      background: #7c3aed;
-      border-radius: 0 3px 3px 0;
-    }
+/* ═══════════════════════ NAV TABS ═══════════════════════ */
+.nav-tab{
+  display:flex;align-items:center;gap:5px;
+  padding:0 14px;height:var(--topbar-h);
+  font-size:12px;font-weight:500;
+  color:var(--text-3);
+  border-bottom:2px solid transparent;
+  border-top:2px solid transparent;
+  transition:color .15s,border-color .15s;
+  white-space:nowrap;
+  text-decoration:none;
+  letter-spacing:0.01em;
+}
+.nav-tab:hover{color:var(--text-1)}
+.nav-tab.active{
+  color:var(--accent);
+  border-bottom-color:var(--accent);
+}
 
-    /* Smooth animations */
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .anim-in { animation: fadeSlideIn 0.2s ease; }
+/* ═══════════════════════ SIDEBAR ═══════════════════════ */
+#sidebar{
+  position:fixed;left:0;top:var(--topbar-h);bottom:0;z-index:40;
+  width:var(--sidebar-w);
+  display:flex;flex-direction:column;
+  background:var(--bg-card);
+  border-right:1px solid var(--border);
+  transition:width .2s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+#sidebar.collapsed{width:var(--sidebar-collapsed)}
 
-    /* Table */
-    .data-table tr:hover td { background: rgba(28,30,46,0.5); }
+/* ═══════════════════════ SIDEBAR ITEMS ═══════════════════════ */
+.sitem{
+  display:flex;align-items:center;gap:12px;
+  padding:7px 14px;border-radius:8px;margin:1px 8px;
+  font-size:11.5px;font-weight:500;
+  color:var(--text-3);
+  text-decoration:none;
+  transition:background .12s,color .12s;
+  white-space:nowrap;overflow:hidden;
+  position:relative;
+}
+.sitem:hover{color:var(--text-1);background:var(--bg-hover)}
+.sitem.active{
+  color:var(--text-1);
+  background:rgba(14,165,233,0.08);
+}
+.sitem.active::before{
+  content:'';position:absolute;left:0;top:20%;bottom:20%;
+  width:3px;background:var(--accent);border-radius:0 3px 3px 0;
+}
+.sitem svg{flex-shrink:0}
 
-    /* Status badge pulse */
-    @keyframes pulse-ring {
-      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
-      70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
-      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-    }
-    .pulse-ok { animation: pulse-ring 2s infinite; }
+/* Category badge */
+.cat-badge{
+  width:20px;height:20px;border-radius:5px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+  background:var(--bg-hover);color:var(--text-4);
+  transition:background .12s,color .12s;
+}
+.sitem:hover .cat-badge,.sitem.active .cat-badge{
+  background:rgba(14,165,233,.15);color:var(--accent);
+}
 
-    /* ── Global dark form inputs ── */
-    input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=button]):not([type=file]):not([type=image]),
-    select,
-    textarea {
-      background: #12141e !important;
-      color: #e2e8f0 !important;
-      border: 1px solid #1c1e2e !important;
-      border-radius: 8px !important;
-      outline: none !important;
-    }
-    input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=button]):not([type=file]):not([type=image]):focus,
-    select:focus,
-    textarea:focus {
-      border-color: rgba(124,58,237,0.6) !important;
-      box-shadow: 0 0 0 2px rgba(124,58,237,0.12) !important;
-    }
-    input::placeholder, textarea::placeholder { color: #4b5563 !important; }
-    select option { background: #12141e; color: #e2e8f0; }
-    /* Autofill override */
-    input:-webkit-autofill,
-    input:-webkit-autofill:focus {
-      -webkit-box-shadow: 0 0 0 1000px #12141e inset !important;
-      -webkit-text-fill-color: #e2e8f0 !important;
-      caret-color: #e2e8f0 !important;
-    }
+/* Section heading */
+.shead{
+  padding:8px 22px 4px;
+  font-size:9px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--text-4);
+  white-space:nowrap;overflow:hidden;
+}
+#sidebar.collapsed .shead{opacity:0}
+#sidebar.collapsed .sitem-label{opacity:0}
+
+/* ═══════════════════════ MAIN CONTENT ═══════════════════════ */
+#main{
+  margin-top:var(--topbar-h);
+  margin-left:var(--sidebar-w);
+  min-height:calc(100vh - var(--topbar-h));
+  transition:margin-left .2s cubic-bezier(.4,0,.2,1);
+}
+body.sidebar-collapsed #main{margin-left:var(--sidebar-collapsed)}
+
+/* ═══════════════════════ THEME TOGGLE ═══════════════════════ */
+.btn-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text-3);cursor:pointer;
+  transition:color .15s,border-color .15s,background .15s;
+  flex-shrink:0;
+}
+.btn-icon:hover{color:var(--text-1);border-color:var(--border-muted);background:var(--bg-hover)}
+
+/* ═══════════════════════ FORMS ═══════════════════════ */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=button]):not([type=file]):not([type=image]),
+select,textarea{
+  background:var(--bg) !important;
+  color:var(--text-2) !important;
+  border:1px solid var(--border) !important;
+  border-radius:8px !important;
+  outline:none !important;
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:13px;
+}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=button]):not([type=file]):not([type=image]):focus,
+select:focus,textarea:focus{
+  border-color:rgba(14,165,233,.5) !important;
+  box-shadow:0 0 0 3px rgba(14,165,233,.08) !important;
+}
+input::placeholder,textarea::placeholder{color:var(--text-4) !important}
+select option{background:var(--bg-card);color:var(--text-2)}
+input:-webkit-autofill,input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px var(--bg) inset !important;
+  -webkit-text-fill-color:var(--text-2) !important;
+  caret-color:var(--text-2) !important;
+}
+
+/* ═══════════════════════ MISC ═══════════════════════ */
+[x-cloak]{display:none!important}
+.log-line{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;padding:1px 0;display:flex;gap:8px}
+.log-error{color:#f87171}.log-warning{color:#fbbf24}.log-success{color:#4ade80}.log-info{color:var(--text-3)}
+
+.pulse-ok{animation:pulse-ring 2s infinite}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}70%{box-shadow:0 0 0 5px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.anim-in{animation:fadeIn .2s ease}
+
+.data-table tr:hover td{background:rgba(33,38,45,.4)}
+
+/* Light-mode chart grid lines */
+[data-theme="light"] .recharts-cartesian-grid line{stroke:#e5e7eb}
+/* ─ Light-mode: remap Tailwind gray utilities to CSS vars ─ */
+[data-theme="light"] .text-white{color:var(--text-1)!important}
+[data-theme="light"] .text-gray-100,[data-theme="light"] .text-gray-200,[data-theme="light"] .text-gray-300{color:var(--text-2)!important}
+[data-theme="light"] .text-gray-400,[data-theme="light"] .text-gray-500{color:var(--text-3)!important}
+[data-theme="light"] .text-gray-600,[data-theme="light"] .text-gray-700,[data-theme="light"] .text-gray-800{color:var(--text-4)!important}
+[data-theme="light"] .hover\:text-white:hover{color:var(--text-1)!important}
+[data-theme="light"] .hover\:text-gray-200:hover,[data-theme="light"] .hover\:text-gray-300:hover{color:var(--text-2)!important}
+[data-theme="light"] .bg-gray-900,[data-theme="light"] .bg-zinc-900{background:var(--bg-card)!important}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:var(--border-muted)}
+/* ─ Light-mode: night-tone icon containers (metric cards) → translucent tint ─ */
+[data-theme="light"] .bg-red-950\/40,[data-theme="light"] .bg-red-950\/15{background:rgba(239,68,68,.08)!important}
+[data-theme="light"] .bg-orange-950\/40{background:rgba(249,115,22,.08)!important}
+[data-theme="light"] .bg-yellow-950\/40{background:rgba(234,179,8,.08)!important}
+[data-theme="light"] .bg-sky-950\/40{background:rgba(56,189,248,.08)!important}
+[data-theme="light"] .border-red-900\/25,[data-theme="light"] .border-red-900\/30{border-color:rgba(239,68,68,.2)!important}
+[data-theme="light"] .border-orange-900\/25{border-color:rgba(249,115,22,.2)!important}
+[data-theme="light"] .border-yellow-900\/25{border-color:rgba(234,179,8,.2)!important}
+[data-theme="light"] .border-sky-900\/25{border-color:rgba(56,189,248,.2)!important}
+/* ─ Light-mode: status/severity badge dark fills → translucent tint ─ */
+[data-theme="light"] .bg-green-900\/30{background:rgba(34,197,94,.1)!important}
+[data-theme="light"] .bg-blue-900\/30,[data-theme="light"] .bg-blue-900\/40{background:rgba(56,189,248,.1)!important}
+[data-theme="light"] .bg-red-900\/30,[data-theme="light"] .bg-red-900\/40{background:rgba(239,68,68,.1)!important}
+[data-theme="light"] .bg-orange-900\/40{background:rgba(249,115,22,.1)!important}
+[data-theme="light"] .bg-yellow-900\/30,[data-theme="light"] .bg-yellow-900\/40{background:rgba(234,179,8,.1)!important}
+/* ─ Light-mode: badge border colors → translucent ─ */
+[data-theme="light"] .border-green-900{border-color:rgba(34,197,94,.3)!important}
+[data-theme="light"] .border-blue-900{border-color:rgba(56,189,248,.3)!important}
+[data-theme="light"] .border-red-900{border-color:rgba(239,68,68,.3)!important}
+[data-theme="light"] .border-orange-900{border-color:rgba(249,115,22,.3)!important}
+[data-theme="light"] .border-yellow-900{border-color:rgba(234,179,8,.3)!important}
+[data-theme="light"] .border-gray-700{border-color:var(--border)!important}
+/* ─ Light-mode: semantic text → darker variants for light-bg contrast ─ */
+[data-theme="light"] .text-green-400{color:#16a34a!important}
+[data-theme="light"] .text-red-400{color:#dc2626!important}
+[data-theme="light"] .text-orange-400{color:#ea580c!important}
+[data-theme="light"] .text-yellow-400{color:#ca8a04!important}
+[data-theme="light"] .text-sky-400,[data-theme="light"] .text-blue-400{color:#0284c7!important}
+[data-theme="light"] .text-purple-400{color:#7c3aed!important}
+[data-theme="light"] .text-gray-600{color:var(--text-3)!important}
+/* ─ Light-mode: table/list hover ─ */
+[data-theme="light"] .hover\:bg-surface\/50:hover{background:var(--bg-hover)!important}
+[data-theme="light"] .hover\:bg-surface-border:hover{background:var(--bg-hover)!important}
+/* ─ Light-mode: input/form fields ─ */
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),[data-theme="light"] textarea,[data-theme="light"] select{background:var(--bg-card)!important;color:var(--text-1)!important;border-color:var(--border)!important}
+[data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{color:var(--text-3)!important}
   </style>
 
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="h-full flex flex-col"
-      x-data="{
-        sidebarOpen: localStorage.getItem('sb') !== 'false',
-        isDark: (localStorage.getItem('pentools-theme') || 'dark') === 'dark',
-        init() {
-          this.$watch('sidebarOpen', v => localStorage.setItem('sb', v));
-        },
-        toggleTheme() {
-          this.isDark = !this.isDark;
-          const t = this.isDark ? 'dark' : 'light';
-          localStorage.setItem('pentools-theme', t);
-          if (t === 'light') {
-            document.documentElement.classList.add('theme-light');
-          } else {
-            document.documentElement.classList.remove('theme-light');
-          }
-        }
-      }">
+<body id="app-body"
+  x-data="{
+    sidebarOpen: localStorage.getItem('pt-sb') !== 'false',
+    isDark: (localStorage.getItem('pt-theme')||'dark')==='dark',
+    toggleSidebar(){
+      this.sidebarOpen=!this.sidebarOpen;
+      localStorage.setItem('pt-sb',this.sidebarOpen);
+      document.body.classList.toggle('sidebar-collapsed',!this.sidebarOpen);
+      document.getElementById('sidebar').classList.toggle('collapsed',!this.sidebarOpen);
+    },
+    toggleTheme(){
+      this.isDark=!this.isDark;
+      const t=this.isDark?'dark':'light';
+      localStorage.setItem('pt-theme',t);
+      document.documentElement.setAttribute('data-theme',t);
+      if(window.__charts) window.__charts.forEach(c=>{
+        c.options.plugins.tooltip.backgroundColor=this.isDark?'#161b22':'#ffffff';
+        c.options.plugins.tooltip.titleColor=this.isDark?'#e6edf3':'#1f2328';
+        c.options.plugins.tooltip.bodyColor=this.isDark?'#c9d1d9':'#424a53';
+        c.options.scales&&Object.values(c.options.scales).forEach(s=>{
+          if(s.grid) s.grid.color=this.isDark?'rgba(33,38,45,.4)':'rgba(0,0,0,.06)';
+          if(s.ticks) s.ticks.color=this.isDark?'#8b949e':'#636c76';
+        });
+        c.update();
+      });
+    },
+    init(){
+      if(!this.sidebarOpen){
+        document.body.classList.add('sidebar-collapsed');
+        document.getElementById('sidebar').classList.add('collapsed');
+      }
+    }
+  }">
 
-  <!-- ═══════════════════════ TOP BAR ═══════════════════════ -->
-  <header class="fixed top-0 left-0 right-0 z-50 h-11 flex items-center gap-2
-                 bg-surface-card border-b border-surface-border px-3">
-    <!-- Hamburger + Logo -->
-    <button @click="sidebarOpen = !sidebarOpen"
-            class="w-7 h-7 flex items-center justify-center rounded text-gray-600 hover:text-gray-300 hover:bg-surface-border transition-colors shrink-0">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
-      </svg>
-    </button>
+  <!-- ══════════════════════════════════════════════════════════
+       TOP BAR
+       ══════════════════════════════════════════════════════════ -->
+  <header id="topbar">
 
-    <a href="{% url 'dashboard' %}" class="flex items-center gap-2 shrink-0 group mr-2">
-      <div class="w-6 h-6 rounded-md bg-accent/20 border border-accent/40 flex items-center justify-center shrink-0">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    <!-- Brand + hamburger -->
+    <div class="flex items-center gap-2 px-4 shrink-0" style="min-width:var(--sidebar-w)">
+      <button @click="toggleSidebar()" class="btn-icon mr-1" title="Toggle sidebar">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M4 6h16M4 12h10M4 18h16"/>
         </svg>
-      </div>
-      <span class="font-mono font-bold text-sm leading-none">
-        <span class="text-accent">vuln</span><span class="text-white">x</span>
-      </span>
-      <span class="text-gray-700 font-mono text-[11px] hidden sm:block">PenTools</span>
-    </a>
-
-    <!-- Project switcher -->
-    <div x-data class="max-w-52 w-full hidden sm:block">
-      <select @change="if ($event.target.value) window.location.href = '/targets/' + $event.target.value + '/'"
-              class="w-full bg-surface-border/60 border border-surface-border text-[11px] text-gray-400 rounded px-2.5 py-1.5
-                     focus:outline-none focus:border-accent/50 focus:text-gray-200 transition-colors cursor-pointer font-mono">
-        <option value="">— Select Project —</option>
-        {% for project in user_all_projects %}
-        <option value="{{ project.id }}">{{ project.name }}</option>
-        {% endfor %}
-      </select>
+      </button>
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-2 shrink-0">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+             style="background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.25)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="font-mono font-bold text-[13px] tracking-tight" style="color:var(--accent)">VULNX</span>
+          <span class="text-[9px] font-semibold tracking-[.18em] hidden sm:block" style="color:var(--text-4)">PENTOOLS</span>
+        </div>
+      </a>
     </div>
 
-    <div class="flex-1"></div>
+    <!-- Global nav tabs -->
+    <nav class="hidden md:flex items-center h-full flex-1 border-l" style="border-color:var(--border)">
+      <a href="{% url 'dashboard' %}"
+         class="nav-tab {% if request.path == '/dashboard/' or request.path == '/' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Overview
+      </a>
+      <a href="{% url 'scans:list' %}"
+         class="nav-tab {% if request.resolver_match.app_name == 'scans' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 3"/>
+        </svg>
+        Scans
+      </a>
+      <a href="{% url 'finding_list' %}"
+         class="nav-tab {% if 'finding' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        Findings
+      </a>
+      <a href="{% url 'modules:list' %}"
+         class="nav-tab {% if request.resolver_match.app_name == 'modules' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path stroke-linecap="round" d="M14 2v6h6"/>
+        </svg>
+        Modules
+      </a>
+      <a href="{% url 'report_list' %}"
+         class="nav-tab {% if 'report' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Reports
+      </a>
+      <a href="{% url 'targets:project_list' %}"
+         class="nav-tab {% if request.resolver_match.app_name == 'targets' %}active{% endif %}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/><path stroke-linecap="round" d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+        </svg>
+        Assets
+      </a>
+    </nav>
 
-    <!-- New Scan button -->
-    <a href="{% url 'modules:list' %}"
-       class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent hover:bg-accent-hover text-white text-[11px] font-semibold transition-colors shrink-0">
-      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-        <path stroke-linecap="round" d="M12 4v16m8-8H4"/>
-      </svg>
-      New Scan
-    </a>
+    <!-- Right actions -->
+    <div class="flex items-center gap-2 px-4 shrink-0">
 
-    <!-- Theme toggle -->
-    <button @click="toggleTheme()"
-            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-            class="btn-theme-toggle shrink-0">
-      <!-- Moon (shown in dark mode) -->
-      <svg x-show="isDark" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-      </svg>
-      <!-- Sun (shown in light mode) -->
-      <svg x-show="!isDark" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="5"/>
-        <path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-      </svg>
-    </button>
+      <!-- Project filter -->
+      <div class="hidden lg:block">
+        <select @change="if($event.target.value) window.location.href='/targets/'+$event.target.value+'/'"
+                class="!bg-transparent !border-[var(--border)] text-[11px] rounded-lg px-2.5 !py-0 font-medium cursor-pointer"
+                style="height:30px;color:var(--text-3);min-width:110px">
+          <option value="" style="background:var(--bg-card);color:var(--text-2)">All Sites ▾</option>
+          {% for project in user_all_projects %}
+          <option value="{{ project.id }}" style="background:var(--bg-card);color:var(--text-2)">{{ project.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <!-- User menu -->
-    <div class="relative shrink-0" x-data="{ open: false }" @click.window="open = false">
+      <!-- New scan CTA -->
+      <a href="{% url 'modules:list' %}"
+         class="hidden sm:flex items-center gap-1.5 px-3.5 text-white text-[11px] font-semibold rounded-lg transition-colors shrink-0"
+         style="height:30px;background:var(--accent);box-shadow:0 1px 4px rgba(14,165,233,.25)">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        + New Scan
+      </a>
 
-      <button @click.stop="open = !open"
-              class="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-surface-border transition-colors group">
-        <div class="w-6 h-6 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-accent font-bold text-[11px] shrink-0">
-          {{ request.user.username|first|upper }}
-        </div>
-        <span class="text-[11px] text-gray-500 group-hover:text-gray-300 hidden md:block font-mono transition-colors">{{ request.user.username }}</span>
-        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" class="text-gray-600 transition-transform duration-150" :class="open ? 'rotate-180' : ''">
-          <path d="M6 9l6 6 6-6"/>
+      <!-- Theme toggle -->
+      <button @click="toggleTheme()" class="btn-icon" :title="isDark?'Light mode':'Dark mode'">
+        <svg x-show="isDark" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"/>
+          <path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg x-show="!isDark" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
         </svg>
       </button>
 
-      <div x-show="open"
-           x-cloak
-           x-transition:enter="transition ease-out duration-100"
-           x-transition:enter-start="opacity-0 -translate-y-1"
-           x-transition:enter-end="opacity-100 translate-y-0"
-           x-transition:leave="transition ease-in duration-75"
-           x-transition:leave-start="opacity-100 translate-y-0"
-           x-transition:leave-end="opacity-0 -translate-y-1"
-           class="absolute right-0 top-full mt-1 w-44 bg-surface-card border border-surface-border rounded-lg shadow-2xl z-[200] overflow-hidden"
-           @click.stop
-           @keydown.escape.window="open = false">
-        <div class="px-3 py-2.5 border-b border-surface-border">
-          <p class="text-xs font-mono text-gray-300 font-medium truncate">{{ request.user.username }}</p>
-          <p class="text-[10px] text-gray-600 truncate mt-0.5">{{ request.user.email|default:"—" }}</p>
+      <!-- User dropdown -->
+      <div class="relative shrink-0" x-data="{open:false}" @click.outside="open=false">
+        <button @click="open=!open"
+                class="flex items-center gap-2 px-2 rounded-lg transition-colors"
+                style="height:30px"
+                :style="open?'background:var(--bg-hover)':''">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+               style="background:linear-gradient(135deg,var(--accent),var(--accent-hover))">
+            {{ request.user.username|first|upper }}
+          </div>
+          <span class="text-[11px] font-medium hidden md:block" style="color:var(--text-3)">{{ request.user.username }}</span>
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"
+               style="color:var(--text-4)" :class="open?'rotate-180':''">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-100"
+             x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-75"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="absolute right-0 mt-1 w-48 rounded-xl shadow-2xl z-[200] overflow-hidden anim-in"
+             style="top:100%;background:var(--bg-card);border:1px solid var(--border)">
+          <div class="px-4 py-3" style="border-bottom:1px solid var(--border)">
+            <p class="text-xs font-semibold truncate" style="color:var(--text-1)">{{ request.user.username }}</p>
+            <p class="text-[10px] truncate mt-0.5" style="color:var(--text-4)">{{ request.user.email|default:"No email set" }}</p>
+          </div>
+          <a href="{% url 'accounts:profile' %}" @click="open=false"
+             class="flex items-center gap-2.5 px-4 py-2.5 text-xs transition-colors"
+             style="color:var(--text-3)"
+             onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text-1)'"
+             onmouseout="this.style.background='';this.style.color='var(--text-3)'">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            Profile &amp; API Key
+          </a>
+          <div style="border-top:1px solid var(--border)"></div>
+          <a href="{% url 'accounts:logout' %}"
+             class="flex items-center gap-2.5 px-4 py-2.5 text-xs text-red-400 transition-colors"
+             onmouseover="this.style.background='rgba(239,68,68,.06)'" onmouseout="this.style.background=''">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Sign out
+          </a>
         </div>
-        <a href="{% url 'accounts:profile' %}" @click="open = false"
-           class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-200 hover:bg-surface-border transition-colors">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-          </svg>
-          Profile &amp; API Key
-        </a>
-        <div class="border-t border-surface-border"></div>
-        <a href="{% url 'accounts:logout' %}"
-           class="flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
-          Sign out
-        </a>
       </div>
     </div>
   </header>
 
-  <!-- ═══════════════════════ BODY ═══════════════════════ -->
-  <div class="flex flex-1 pt-11 min-h-0">
+  <!-- ══════════════════════════════════════════════════════════
+       SIDEBAR  — Module categories & navigation context only
+       (Core nav is in the TOPBAR; sidebar = workspace context)
+       ══════════════════════════════════════════════════════════ -->
+  <aside id="sidebar">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-2 select-none">
 
-    <!-- ═══════ SIDEBAR ═══════ -->
-    <aside class="fixed left-0 top-11 bottom-0 z-40 flex flex-col w-48
-                  bg-surface-card border-r border-surface-border
-                  transition-[width] duration-200 overflow-hidden shrink-0"
-           :class="sidebarOpen ? 'w-48' : 'w-11'">
+      <!-- Alerts — notification center (not in topbar) -->
+      <a href="{% url 'channel_list' %}"
+         class="sitem {% if 'channel' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+        <span class="sitem-label">Alerts</span>
+      </a>
 
-      <nav class="flex flex-col gap-px p-2 flex-1 overflow-y-auto overflow-x-hidden select-none">
+      <!-- Divider -->
+      <div class="mx-3 my-3" style="height:1px;background:var(--border)"></div>
 
-        <!-- Dashboard -->
-        <a href="{% url 'dashboard' %}"
-           class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors
-                  {% if request.resolver_match.url_name == 'index' or request.path == '/dashboard/' %}nav-active text-white bg-accent/10{% else %}text-gray-500 hover:text-white hover:bg-surface-border{% endif %}">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="shrink-0">
-            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-xs font-medium whitespace-nowrap overflow-hidden">Dashboard</span>
-        </a>
+      <!-- Attack module categories -->
+      <div class="shead">Attack Modules</div>
 
-        <!-- Projects -->
-        <a href="{% url 'targets:project_list' %}"
-           class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors
-                  {% if request.resolver_match.app_name == 'targets' %}nav-active text-white bg-accent/10{% else %}text-gray-500 hover:text-white hover:bg-surface-border{% endif %}">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="shrink-0">
-            <path stroke-linecap="round" d="M3 7a2 2 0 012-2h3.4a2 2 0 011.2.4l1.8 1.2A2 2 0 0012.6 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-xs font-medium whitespace-nowrap overflow-hidden">Projects</span>
-        </a>
+      {% for cat_item in module_category_list %}
+      <a href="{% url 'modules:list' %}?category={{ cat_item.slug }}"
+         class="sitem">
+        <span class="cat-badge">{{ cat_item.count }}</span>
+        <span class="sitem-label">{{ cat_item.label }}</span>
+      </a>
+      {% endfor %}
 
-        <!-- Scans -->
-        <a href="{% url 'scans:list' %}"
-           class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors
-                  {% if request.resolver_match.app_name == 'scans' %}nav-active text-white bg-accent/10{% else %}text-gray-500 hover:text-white hover:bg-surface-border{% endif %}">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="shrink-0">
-            <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 3"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-xs font-medium whitespace-nowrap overflow-hidden">Scans</span>
-        </a>
+      <a href="{% url 'modules:list' %}" class="sitem mt-1" style="color:var(--accent);opacity:.8"
+         onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+        <span class="sitem-label">All modules</span>
+      </a>
+    </nav>
 
-        <!-- Findings -->
-        <a href="{% url 'finding_list' %}"
-           class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors
-                  {% if 'finding' in request.resolver_match.url_name|default:'' %}nav-active text-white bg-accent/10{% else %}text-gray-500 hover:text-white hover:bg-surface-border{% endif %}">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="shrink-0">
-            <path stroke-linecap="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-xs font-medium whitespace-nowrap overflow-hidden">Findings</span>
-        </a>
-
-        <!-- Reports -->
-        <a href="{% url 'report_list' %}"
-           class="nav-item flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors
-                  {% if 'report' in request.resolver_match.url_name|default:'' %}nav-active text-white bg-accent/10{% else %}text-gray-500 hover:text-white hover:bg-surface-border{% endif %}">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" class="shrink-0">
-            <path stroke-linecap="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-xs font-medium whitespace-nowrap overflow-hidden">Reports</span>
-        </a>
-
-        <!-- Modules heading -->
-        <div class="mt-4 mb-0.5" x-show="sidebarOpen" x-cloak>
-          <p class="px-2.5 text-[9px] font-bold text-gray-700 uppercase tracking-[0.15em]">Attack Modules</p>
-        </div>
-        <div class="mt-3 mb-1 border-t border-surface-border mx-2" x-show="!sidebarOpen"></div>
-
-        <!-- Module categories -->
-        {% for cat_item in module_category_list %}
-        <a href="{% url 'modules:list' %}?category={{ cat_item.slug }}"
-           class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-colors group
-                  text-gray-600 hover:text-gray-200 hover:bg-surface-border">
-          <span class="w-4 h-4 shrink-0 flex items-center justify-center rounded font-mono
-                       text-[9px] font-bold bg-surface-border text-gray-600
-                       group-hover:bg-accent/20 group-hover:text-accent transition-colors">
-            {{ cat_item.count }}
-          </span>
-          <span x-show="sidebarOpen" x-cloak class="text-[11px] whitespace-nowrap overflow-hidden">{{ cat_item.label }}</span>
-        </a>
-        {% endfor %}
-
-        <!-- All modules -->
-        <a href="{% url 'modules:list' %}"
-           class="flex items-center gap-2.5 px-2.5 py-1.5 mt-1 rounded-md transition-colors
-                  text-gray-600 hover:text-accent hover:bg-accent/5">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="shrink-0">
-            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h7"/>
-          </svg>
-          <span x-show="sidebarOpen" x-cloak class="text-[11px] whitespace-nowrap overflow-hidden">All modules →</span>
-        </a>
-
-      </nav>
-
-      <!-- Sidebar footer -->
-      <div class="border-t border-surface-border p-2 shrink-0">
-        <div x-show="sidebarOpen" x-cloak class="flex items-center justify-between px-1.5 py-1">
-          <span class="text-[10px] font-mono text-gray-700">v0.1.0-alpha</span>
-          <span class="flex items-center gap-1 text-[10px] font-mono text-ok/70">
-            <span class="w-1.5 h-1.5 rounded-full bg-ok inline-block pulse-ok"></span>
-            online
-          </span>
-        </div>
-        <div x-show="!sidebarOpen" class="flex justify-center py-1">
-          <span class="w-2 h-2 rounded-full bg-ok pulse-ok inline-block"></span>
-        </div>
+    <!-- Sidebar footer -->
+    <div style="border-top:1px solid var(--border)" class="p-3 shrink-0">
+      <div class="flex items-center justify-between px-1 overflow-hidden">
+        <span class="font-mono text-[9px] whitespace-nowrap sitem-label" style="color:var(--text-4)">v0.1.0</span>
+        <span class="flex items-center gap-1.5 font-mono text-[9px] whitespace-nowrap" style="color:var(--text-3)">
+          <span class="w-1.5 h-1.5 rounded-full bg-ok inline-block pulse-ok"></span>
+          <span class="sitem-label">ONLINE</span>
+        </span>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <!-- ═══════ MAIN CONTENT ═══════ -->
-    <main class="flex-1 overflow-y-auto min-w-0 transition-[margin] duration-200 ml-48"
-          :class="sidebarOpen ? 'ml-48' : 'ml-11'">
+  <!-- ══════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ══════════════════════════════════════════════════════════ -->
+  <main id="main">
 
-      <!-- Flash messages -->
-      {% if messages %}
-      <div class="fixed top-13 right-4 z-50 flex flex-col gap-2 max-w-xs pointer-events-none" style="top: 56px;">
-        {% for message in messages %}
-        <div x-data="{ show: true }" x-show="show" x-cloak
-             x-init="setTimeout(() => show = false, 4500)"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-x-4"
-             x-transition:enter-end="opacity-100 translate-x-0"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 translate-x-0"
-             x-transition:leave-end="opacity-0 translate-x-4"
-             class="pointer-events-auto flex items-start gap-3 px-3.5 py-2.5 rounded-lg shadow-2xl
-                    text-xs border backdrop-blur-md
-                    {% if message.tags == 'error' %}bg-red-950/95 border-red-800/60 text-red-300
-                    {% elif message.tags == 'success' %}bg-green-950/95 border-green-800/60 text-green-300
-                    {% elif message.tags == 'warning' %}bg-yellow-950/95 border-yellow-800/60 text-yellow-300
-                    {% else %}bg-surface-card/95 border-surface-border text-gray-300{% endif %}">
-          <span class="flex-1">{{ message }}</span>
-          <button @click="show = false" class="opacity-50 hover:opacity-100 transition-opacity mt-px">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-              <path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        {% endfor %}
+    <!-- Toast messages -->
+    {% if messages %}
+    <div class="fixed top-14 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+      {% for message in messages %}
+      <div x-data="{show:true}" x-show="show" x-cloak
+           x-init="setTimeout(()=>show=false,4500)"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 translate-x-4"
+           x-transition:enter-end="opacity-100 translate-x-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0 translate-x-4"
+           class="pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs border backdrop-blur-md anim-in"
+           style="{% if message.tags == 'error' %}background:rgba(127,29,29,.95);border-color:rgba(239,68,68,.3);color:#fca5a5{% elif message.tags == 'success' %}background:rgba(5,46,22,.95);border-color:rgba(34,197,94,.3);color:#86efac{% elif message.tags == 'warning' %}background:rgba(78,53,4,.95);border-color:rgba(234,179,8,.3);color:#fde68a{% else %}background:var(--bg-card);border-color:var(--border);color:var(--text-2){% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button @click="show=false" class="opacity-50 hover:opacity-100 mt-px">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
-      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
 
-      <!-- Page content -->
-      <div class="p-6">
-        {% block content %}{% endblock %}
-      </div>
-    </main>
+    <!-- Page content -->
+    <div class="p-5 lg:p-6">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
 
-    {% block right_panel %}{% endblock %}
-  </div>
+  {% block right_panel %}{% endblock %}
 
   <script>
-    document.body.addEventListener('htmx:configRequest', (evt) => {
-      evt.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    document.body.addEventListener('htmx:configRequest',(evt)=>{
+      evt.detail.headers['X-CSRFToken']='{{ csrf_token }}';
     });
+    window.__charts=window.__charts||[];
   </script>
-
   {% block extra_js %}{% endblock %}
 </body>
 </html>

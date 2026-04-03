@@ -10,34 +10,88 @@ from django.shortcuts import render, redirect
 def dashboard(request):
     from apps.scans.models import ScanJob
     from apps.results.models import Finding
-    from django.db.models import Q, Sum
+    from django.db.models import Q, Count
+    from django.db.models.functions import TruncDate
     from django.utils import timezone
+    import json as _json
+    from datetime import timedelta
 
     today = timezone.now().date()
     qs = ScanJob.objects.filter(created_by=request.user)
 
-    agg = qs.filter(status="done").aggregate(
-        critical_sum=Sum("critical_count"),
-        high_sum=Sum("high_count"),
+    # All findings visible to this user
+    user_findings = Finding.objects.filter(
+        Q(scan_job__created_by=request.user) | Q(created_by=request.user),
     )
 
-    # Active finding counts from the Finding model (more accurate than scan aggregates)
-    open_findings = Finding.objects.filter(
-        Q(scan_job__created_by=request.user) | Q(created_by=request.user),
-        status__in=("open", "confirmed"),
+    # Severity breakdown from Finding model (single query, accurate)
+    sev_counts = dict(
+        user_findings.values_list("severity").annotate(c=Count("id")).values_list("severity", "c")
+    )
+
+    # Open finding counts
+    open_findings = user_findings.filter(status__in=("open", "confirmed"))
+
+    # ── Chart data: scan activity last 14 days ──
+    day_start = today - timedelta(days=13)
+    daily_scans = dict(
+        qs.filter(created_at__date__gte=day_start)
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(c=Count("id"))
+        .values_list("day", "c")
+    )
+    daily_findings = dict(
+        user_findings.filter(created_at__date__gte=day_start)
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(c=Count("id"))
+        .values_list("day", "c")
+    )
+    trend_labels = []
+    trend_scans = []
+    trend_findings = []
+    for i in range(14):
+        d = day_start + timedelta(days=i)
+        trend_labels.append(d.strftime("%b %d"))
+        trend_scans.append(daily_scans.get(d, 0))
+        trend_findings.append(daily_findings.get(d, 0))
+
+    # ── Chart data: scan status breakdown ──
+    status_counts = dict(
+        qs.values("status").annotate(c=Count("id")).values_list("status", "c")
+    )
+
+    # ── Chart data: finding status breakdown ──
+    finding_status_counts = dict(
+        user_findings.values("status").annotate(c=Count("id")).values_list("status", "c")
     )
 
     stats = {
         "scans_today": qs.filter(created_at__date=today).count(),
         "scans_total": qs.count(),
-        "critical":    agg["critical_sum"] or 0,
-        "high":        agg["high_sum"] or 0,
+        "critical":    sev_counts.get("critical", 0),
+        "high":        sev_counts.get("high", 0),
+        "medium":      sev_counts.get("medium", 0),
+        "low":         sev_counts.get("low", 0),
+        "info":        sev_counts.get("info", 0),
         "running":     qs.filter(status__in=["pending", "running"]).count(),
         "open_findings": open_findings.count(),
         "open_critical": open_findings.filter(severity="critical").count(),
     }
+
+    chart_data = {
+        "trend_labels":   _json.dumps(trend_labels),
+        "trend_scans":    _json.dumps(trend_scans),
+        "trend_findings": _json.dumps(trend_findings),
+        "scan_status":    _json.dumps(status_counts),
+        "finding_status": _json.dumps(finding_status_counts),
+    }
+
     recent_jobs = qs.select_related("target", "project").order_by("-created_at")[:10]
-    return render(request, "dashboard/index.html", {"recent_jobs": recent_jobs, **stats})
+    return render(request, "dashboard/index.html", {
+        "recent_jobs": recent_jobs, **stats, **chart_data,
+    })
 
 
 urlpatterns = [

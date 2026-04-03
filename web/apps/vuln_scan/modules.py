@@ -3,6 +3,7 @@ Vulnerability scanning modules — auto-discovered by ModuleRegistry.
 Sprint 2 Phase 1: Nuclei CVE scan, Misconfiguration scan, Web Templates scan
 """
 from __future__ import annotations
+import time
 from apps.modules.engine import BaseModule, FieldSchema
 from apps.modules.runner import ToolRunner
 
@@ -99,7 +100,20 @@ class _NucleiBaseModule(BaseModule):
                         cve_ids = entry.get("info", {}).get("classification", {}).get("cve-id", [])
                         cve_id = ", ".join(cve_ids) if cve_ids else ""
                         evidence = entry.get("extracted-results", [])
-                        evidence_str = "\n".join(evidence) if evidence else entry.get("request", "")[:500]
+                        req_block  = entry.get("request", "")
+                        resp_block = entry.get("response", "")
+                        if evidence:
+                            evidence_str = "Extracted:\n" + "\n".join(evidence)
+                            if req_block:
+                                evidence_str += f"\n\n─── HTTP Request ───────────────────────────────\n{req_block[:800]}"
+                            if resp_block:
+                                evidence_str += f"\n\n─── HTTP Response ──────────────────────────────\n{resp_block[:800]}"
+                        elif req_block:
+                            evidence_str = f"─── HTTP Request ───────────────────────────────\n{req_block[:800]}"
+                            if resp_block:
+                                evidence_str += f"\n\n─── HTTP Response ──────────────────────────────\n{resp_block[:800]}"
+                        else:
+                            evidence_str = ""
 
                         findings.append({
                             "title": name,
@@ -1123,3 +1137,385 @@ class CVEPoCMatcherModule(BaseModule):
 
         stream("success", f"CVE PoC matcher complete — {len(findings)} finding(s)")
         return {"status": "done", "findings": findings, "raw_output": "\n".join(raw_lines)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OWASP ZAP modules
+# Prerequisites: the `zap` Docker service must be running (docker-compose up zap).
+# ZAP_API_URL and ZAP_API_KEY must be set in .env (defaults: http://zap:8080 / changeme).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class _ZAPBaseModule(BaseModule):
+    """
+    Shared base for all OWASP ZAP integration modules.
+
+    The ZAP daemon runs as a separate Docker service and is reachable
+    at http://zap:8080 (service name DNS) from all containers in the
+    same Compose network.  No binary is needed in the tools volume.
+    """
+
+    celery_queue = "vuln_scan_queue"
+    time_limit   = 3600   # 1-hour hard cap per scan
+
+    _BASE_PARAMS = [
+        FieldSchema(
+            key="target_url",
+            label="Target URL",
+            field_type="url",
+            required=True,
+            placeholder="https://example.com",
+        ),
+        FieldSchema(
+            key="auth_cookie",
+            label="Session Cookie",
+            field_type="text",
+            required=False,
+            sensitive=True,
+            help_text="Full Cookie header value for authenticated scans.",
+            group="credentials",
+        ),
+        FieldSchema(
+            key="auth_header",
+            label="Authorization Header",
+            field_type="text",
+            required=False,
+            sensitive=True,
+            placeholder="Bearer eyJ...",
+            help_text="Value for the Authorization header (optional).",
+            group="credentials",
+        ),
+        FieldSchema(
+            key="zap_api_url",
+            label="ZAP API URL",
+            field_type="text",
+            required=False,
+            default="",
+            placeholder="http://zap:8080",
+            help_text="Leave blank to use ZAP_API_URL env-var (recommended).",
+            group="advanced",
+        ),
+        FieldSchema(
+            key="zap_api_key",
+            label="ZAP API Key",
+            field_type="text",
+            required=False,
+            default="",
+            sensitive=True,
+            help_text="Leave blank to use ZAP_API_KEY env-var (recommended).",
+            group="advanced",
+        ),
+    ]
+
+    def _get_client(self, params: dict):
+        from apps.vuln_scan.zap import ZAPClient, ZAPNotAvailableError
+        url = (params.get("zap_api_url") or "").strip() or None
+        key = (params.get("zap_api_key") or "").strip() or None
+        client = ZAPClient(api_url=url, api_key=key)
+        try:
+            info = client.ping()
+            version = info.get("version", "unknown")
+            return client, version
+        except ZAPNotAvailableError as exc:
+            raise RuntimeError(
+                "OWASP ZAP daemon is not reachable. "
+                "Make sure the 'zap' service is running: docker compose up -d zap\n"
+                f"Detail: {exc}"
+            ) from exc
+
+    def _setup_auth(self, client, params: dict, target_url: str) -> None:
+        from apps.vuln_scan.zap import ZAPClient
+        cookie = (params.get("auth_cookie") or "").strip()
+        auth   = (params.get("auth_header") or "").strip()
+        if cookie:
+            client.add_session_cookie(target_url, cookie)
+        if auth:
+            client.set_custom_header("Authorization", auth)
+
+
+# ─── [ZAP-01] OWASP ZAP — Web Spider ─────────────────────────────────────────
+
+class ZAPSpiderModule(_ZAPBaseModule):
+    id          = "ZAP-01"
+    name        = "OWASP ZAP — Web Spider"
+    category    = "vuln_scan"
+    description = (
+        "Passive web crawl using OWASP ZAP's traditional spider and optional "
+        "Ajax spider.  Discovers URLs, forms, and application structure without "
+        "sending any attack payloads.  Passive analysis of responses is performed "
+        "automatically as pages are fetched."
+    )
+    risk_level  = "low"
+    tags        = ["zap", "owasp", "spider", "crawler", "passive", "recon"]
+
+    PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
+        FieldSchema(
+            key="max_depth",
+            label="Max Crawl Depth",
+            field_type="number",
+            default=5,
+            help_text="Maximum link depth the spider will follow (0 = unlimited).",
+        ),
+        FieldSchema(
+            key="use_ajax_spider",
+            label="Also run Ajax Spider (JavaScript-rendered pages)",
+            field_type="toggle",
+            default=False,
+            help_text="Slower but discovers content rendered by JavaScript frameworks.",
+        ),
+        FieldSchema(
+            key="ajax_spider_mins",
+            label="Ajax Spider Max Minutes",
+            field_type="number",
+            default=5,
+            group="advanced",
+        ),
+    ]
+
+    def execute(self, params: dict, job_id: str, stream) -> dict:
+        client, version = self._get_client(params)
+        target = params["target_url"].strip()
+        max_depth = int(params.get("max_depth", 5))
+        use_ajax  = params.get("use_ajax_spider", False)
+        ajax_mins = int(params.get("ajax_spider_mins", 5))
+
+        stream("info", f"[ZAP {version}] Starting Web Spider → {target}")
+        client.new_session(f"spider-{job_id[:8]}")
+        self._setup_auth(client, params, target)
+
+        # Traditional spider
+        scan_id = client.spider_start(target, max_depth=max_depth)
+        stream("info", f"[ZAP] Traditional spider started (scan ID: {scan_id})")
+        client.wait_spider(scan_id, timeout=self.time_limit - 300, stream=stream)
+
+        urls = client.spider_results(scan_id)
+        stream("success", f"[ZAP] Traditional spider found {len(urls)} URLs.")
+
+        # Optional Ajax spider
+        if use_ajax:
+            stream("info", f"[ZAP] Starting Ajax spider (max {ajax_mins} min)…")
+            client.ajax_spider_start(target)
+            deadline = time.time() + ajax_mins * 60
+            while time.time() < deadline:
+                status = client.ajax_spider_status()
+                stream("info", f"[ZAP] Ajax spider status: {status}")
+                if status == "stopped":
+                    break
+                time.sleep(15)
+            ajax_urls = client.ajax_spider_results()
+            stream("success", f"[ZAP] Ajax spider found {len(ajax_urls)} additional URLs.")
+            urls = list(set(urls + ajax_urls))
+
+        # Wait for passive scan queue to drain
+        stream("info", "[ZAP] Waiting for passive analysis to complete…")
+        client.wait_passive_scan(timeout=300, stream=stream)
+
+        # Collect alerts from passive analysis
+        findings = client.alerts_as_findings(target_url=target)
+        stream("success", f"[ZAP] Passive analysis complete — {len(findings)} alerts.")
+
+        # Add URL-discovery findings (info severity)
+        for url in urls[:500]:  # cap to avoid thousands of info findings
+            findings.append({
+                "title":       f"[ZAP Spider] URL discovered: {url}",
+                "severity":    "info",
+                "url":         url,
+                "description": f"URL discovered by ZAP spider during crawl of {target}.",
+                "evidence":    url,
+                "remediation": "Review discovered URLs for unintended exposure.",
+            })
+
+        client.remove_replacer_rules()
+
+        return {
+            "status":   "done",
+            "findings": findings,
+            "raw_output": f"ZAP Spider complete. URLs: {len(urls)} | Alerts: {len(findings) - len(urls)}",
+            "metadata": {
+                "urls_discovered": len(urls),
+                "subdomains": [],
+                "zap_version": version,
+            },
+        }
+
+
+# ─── [ZAP-02] OWASP ZAP — Passive Audit ─────────────────────────────────────
+
+class ZAPPassiveAuditModule(_ZAPBaseModule):
+    id          = "ZAP-02"
+    name        = "OWASP ZAP — Passive Audit"
+    category    = "vuln_scan"
+    description = (
+        "Spider the target with OWASP ZAP and run a full passive-only audit. "
+        "Detects missing security headers, insecure cookies, information disclosure, "
+        "CSP issues, and more — without sending any attack payloads."
+    )
+    risk_level  = "low"
+    tags        = ["zap", "owasp", "passive", "audit", "headers", "cookies", "csp"]
+
+    PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
+        FieldSchema(
+            key="max_depth",
+            label="Max Crawl Depth",
+            field_type="number",
+            default=5,
+        ),
+    ]
+
+    def execute(self, params: dict, job_id: str, stream) -> dict:
+        client, version = self._get_client(params)
+        target    = params["target_url"].strip()
+        max_depth = int(params.get("max_depth", 5))
+
+        stream("info", f"[ZAP {version}] Starting Passive Audit → {target}")
+        client.new_session(f"passive-{job_id[:8]}")
+        self._setup_auth(client, params, target)
+
+        # Spider to populate ZAP's site map
+        scan_id = client.spider_start(target, max_depth=max_depth)
+        stream("info", f"[ZAP] Spider started (ID: {scan_id})")
+        client.wait_spider(scan_id, timeout=self.time_limit - 600, stream=stream)
+        urls = client.spider_results(scan_id)
+        stream("success", f"[ZAP] Spider found {len(urls)} URLs. Running passive checks…")
+
+        # Passive scan drains automatically; just wait
+        client.wait_passive_scan(timeout=600, stream=stream)
+
+        findings = client.alerts_as_findings(target_url=target)
+        # Only keep passive findings (no attack evidence)
+        summary = client.alerts_summary()
+        stream("success", f"[ZAP] Passive audit done — {len(findings)} alerts. "
+               f"High:{summary.get('High',0)} Med:{summary.get('Medium',0)} "
+               f"Low:{summary.get('Low',0)} Info:{summary.get('Informational',0)}")
+
+        client.remove_replacer_rules()
+
+        return {
+            "status":   "done",
+            "findings": findings,
+            "raw_output": (
+                f"ZAP Passive Audit complete. "
+                f"URLs crawled: {len(urls)} | Alerts: {len(findings)}"
+            ),
+            "metadata": {
+                "urls_crawled":   len(urls),
+                "alerts_summary": summary,
+                "zap_version":    version,
+            },
+        }
+
+
+# ─── [ZAP-03] OWASP ZAP — Active Audit ──────────────────────────────────────
+
+class ZAPActiveAuditModule(_ZAPBaseModule):
+    id          = "ZAP-03"
+    name        = "OWASP ZAP — Active Audit"
+    category    = "vuln_scan"
+    description = (
+        "Full active vulnerability scan using OWASP ZAP: spider + active audit. "
+        "Actively tests for SQLi, XSS, SSRF, path traversal, command injection, "
+        "XXE, IDOR, broken auth, and 100+ other vulnerability classes by sending "
+        "attack payloads to the target. "
+        "Only run against targets you own or have explicit written permission to test."
+    )
+    risk_level  = "high"
+    tags        = ["zap", "owasp", "active", "sqli", "xss", "full-scan", "pentest"]
+
+    PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
+        FieldSchema(
+            key="max_depth",
+            label="Max Crawl Depth",
+            field_type="number",
+            default=5,
+        ),
+        FieldSchema(
+            key="scan_policy",
+            label="Scan Policy",
+            field_type="select",
+            default="",
+            options=[
+                {"value": "",          "label": "Default (all checks)"},
+                {"value": "SQL Injection", "label": "SQL Injection only"},
+                {"value": "XSS",       "label": "XSS only"},
+            ],
+            help_text="Leave as Default to run all active rules.",
+            group="advanced",
+        ),
+        FieldSchema(
+            key="recurse",
+            label="Recurse (scan all discovered URLs)",
+            field_type="toggle",
+            default=True,
+            group="advanced",
+        ),
+    ]
+
+    def execute(self, params: dict, job_id: str, stream) -> dict:
+        client, version = self._get_client(params)
+        target     = params["target_url"].strip()
+        max_depth  = int(params.get("max_depth", 5))
+        recurse    = bool(params.get("recurse", True))
+
+        # Only pass scan_policy if it matches a real ZAP policy name.
+        # The "Default" option has value="" — if the frontend sends the label
+        # text instead of the value, normalise it back to empty string.
+        _raw_policy = (params.get("scan_policy") or "").strip()
+        _KNOWN_POLICIES = {"SQL Injection", "XSS"}
+        policy = _raw_policy if _raw_policy in _KNOWN_POLICIES else ""
+
+        stream("info", f"[ZAP {version}] Starting Active Audit → {target}")
+        stream("warning",
+               "[ZAP] Active scan sends real attack payloads. "
+               "Ensure you have written authorisation for this target.")
+
+        client.new_session(f"active-{job_id[:8]}")
+        self._setup_auth(client, params, target)
+
+        # Phase 1 — Spider to build site map
+        stream("info", "[ZAP] Phase 1/3 — Spidering target…")
+        scan_id = client.spider_start(target, max_depth=max_depth)
+        client.wait_spider(scan_id, timeout=self.time_limit // 3, stream=stream)
+        urls = client.spider_results(scan_id)
+        stream("success", f"[ZAP] Spider found {len(urls)} URLs.")
+
+        # Phase 2 — Passive analysis while spider runs
+        stream("info", "[ZAP] Phase 2/3 — Waiting for passive analysis…")
+        client.wait_passive_scan(timeout=300, stream=stream)
+
+        # Phase 3 — Active scan
+        # Get the actual site URL from ZAP's tree (target may have been redirected)
+        actual_target = client.best_site_for(target)
+        if actual_target != target:
+            stream("info", f"[ZAP] Target redirected in site tree → {actual_target}")
+        stream("info", f"[ZAP] Phase 3/3 — Active scan (policy: {policy or 'Default'})…")
+        ascan_id = client.active_scan_start(actual_target, recurse=recurse, policy=policy)
+        stream("info", f"[ZAP] Active scan started (ID: {ascan_id})")
+        client.wait_active_scan(
+            ascan_id,
+            timeout=self.time_limit - 600,
+            stream=stream,
+        )
+
+        findings = client.alerts_as_findings(target_url=target)
+        summary  = client.alerts_summary()
+        stream("success",
+               f"[ZAP] Active audit done — {len(findings)} alerts. "
+               f"High:{summary.get('High',0)} Med:{summary.get('Medium',0)} "
+               f"Low:{summary.get('Low',0)} Info:{summary.get('Informational',0)}")
+
+        client.remove_replacer_rules()
+
+        return {
+            "status":   "done",
+            "findings": findings,
+            "raw_output": (
+                f"ZAP Active Audit complete. "
+                f"URLs crawled: {len(urls)} | Alerts: {len(findings)}"
+            ),
+            "metadata": {
+                "urls_crawled":   len(urls),
+                "alerts_summary": summary,
+                "zap_version":    version,
+            },
+        }
+
+

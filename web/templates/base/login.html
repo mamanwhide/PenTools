@@ -12,11 +12,11 @@
     :root {
       --bg: #07090f;
       --surface: #0d1117;
-      --card: #10161f;
-      --border: #1c2333;
-      --border-focus: rgba(59,130,246,0.5);
-      --accent: #3b82f6;
-      --accent-dark: #1d4ed8;
+      --card: #161b22;
+      --border: #21262d;
+      --border-focus: rgba(14,165,233,0.5);
+      --accent: #0ea5e9;
+      --accent-dark: #0284c7;
       --text: #e2e8f0;
       --text-muted: #64748b;
       --text-dim: #334155;
@@ -29,11 +29,11 @@
 
     /* Light mode */
     html.theme-light {
-      --bg: #f1f5f9;
+      --bg: #f6f8fa;
       --surface: #f8fafc;
       --card: #ffffff;
-      --border: #e2e8f0;
-      --border-focus: rgba(59,130,246,0.45);
+      --border: #d0d7de;
+      --border-focus: rgba(14,165,233,0.45);
       --text: #0f172a;
       --text-muted: #64748b;
       --text-dim: #94a3b8;
@@ -41,11 +41,11 @@
     }
     html.theme-light body {
       background-image:
-        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+        linear-gradient(rgba(14,165,233,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14,165,233,0.04) 1px, transparent 1px);
     }
     html.theme-light body::before {
-      background: radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(14,165,233,0.05) 0%, transparent 70%);
     }
     html.theme-light .card {
       box-shadow: 0 0 0 1px var(--border), 0 8px 32px rgba(0,0,0,0.08);
@@ -81,8 +81,8 @@
       position: relative;
       overflow: hidden;
       background-image:
-        linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px);
+        linear-gradient(rgba(14,165,233,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14,165,233,0.025) 1px, transparent 1px);
       background-size: 44px 44px;
     }
 
@@ -96,7 +96,7 @@
       width: 560px;
       height: 560px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -171,8 +171,8 @@
       width: 30px;
       height: 30px;
       border-radius: 7px;
-      background: rgba(59,130,246,0.12);
-      border: 1px solid rgba(59,130,246,0.25);
+      background: rgba(14,165,233,0.12);
+      border: 1px solid rgba(14,165,233,0.25);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -276,7 +276,7 @@
 
     .field-input:focus {
       border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
     }
 
     .field-input:-webkit-autofill,
@@ -335,7 +335,7 @@
 
     .btn-submit:hover {
       opacity: 0.9;
-      box-shadow: 0 0 20px rgba(59,130,246,0.25);
+      box-shadow: 0 0 20px rgba(14,165,233,0.25);
     }
 
     .btn-submit:active { opacity: 0.8; }
@@ -410,7 +410,7 @@
         <!-- Brand -->
         <div class="brand">
           <div class="brand-icon">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
           </div>

@@ -31,6 +31,9 @@ class ScanJob(models.Model):
     finding_count     = models.PositiveIntegerField(default=0)
     critical_count    = models.PositiveIntegerField(default=0)
     high_count        = models.PositiveIntegerField(default=0)
+    medium_count      = models.PositiveIntegerField(default=0)
+    low_count         = models.PositiveIntegerField(default=0)
+    info_count        = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]

@@ -1,6 +1,6 @@
 # PenTools
 
-**PenTools** is a self-hosted, web-based penetration testing platform built on Django 5.1, Celery, Django Channels, and PostgreSQL. It provides 132 security testing modules covering every major OWASP category, a real-time scan console over WebSocket, structured finding management with CVSS 3.1 scoring, professional PDF/HTML report generation, and an interactive attack graph per project.
+**PenTools** is a self-hosted, web-based penetration testing platform built on Django 5.1, Celery, Django Channels, and PostgreSQL. It provides 135 security testing modules covering every major OWASP category — including native OWASP ZAP integration for spider, passive, and active scanning — a real-time scan console over WebSocket, structured finding management with CVSS 3.1 scoring, professional PDF/HTML report generation, and an interactive attack graph per project.
 
 ---
 
@@ -31,7 +31,7 @@ PenTools provides a browser-based interface for launching and managing penetrati
 
 Core capabilities:
 
-- 132 attack modules across 14 categories (authentication, injection, XSS, reconnaissance, API, cloud, and more)
+- 135 attack modules across 14 categories (authentication, injection, XSS, reconnaissance, API, cloud, and more), including 3 native OWASP ZAP modules
 - Real-time scan output streamed over WebSocket to a live log console
 - Per-finding status tracking with CVSS 3.1 scoring, duplicate detection, and triage workflow
 - Professional six-section report builder (Executive Summary, Methodology, Scope of Work, Findings Summary, Detailed Findings, WSTG v4.2 Playbook) exported as HTML or PDF
@@ -82,6 +82,7 @@ Services defined in `docker-compose.yml`:
 | `celery`       | `./web/Dockerfile`    | Scan task worker                         |
 | `celery_beat`  | `./web/Dockerfile`    | Periodic task scheduler                  |
 | `flower`       | `./web/Dockerfile`    | Celery monitor (port 5555)               |
+| `zap`          | `ghcr.io/zaproxy/zaproxy:stable` | OWASP ZAP daemon (API port 8080) |
 | `tools`        | `./tools/Dockerfile`  | Installs pentest binaries into a volume  |
 | `nginx`        | `nginx:1.26-alpine`   | Reverse proxy (ports 80 / 443)           |
 
@@ -476,6 +477,14 @@ The `ModuleRegistry` singleton discovers all modules at startup by importing eve
 | V-09  | Default Credentials Tester        |
 | V-10  | CVE PoC Auto-Matcher              |
 
+### OWASP ZAP Integration — 3 modules
+
+| ID      | Name                              |
+|---------|-----------------------------------|
+| ZAP-01  | ZAP — Spider & URL Discovery      |
+| ZAP-02  | ZAP — Passive Audit               |
+| ZAP-03  | ZAP — Active Audit                |
+
 ### Static / Offline Tools — 9 modules
 
 | ID    | Name                       |
@@ -627,6 +636,8 @@ Copy `.env.example` to `.env` before running. Required variables must be set bef
 | `SHODAN_API_KEY`         | No       | —                        | Shodan API key (R-10 and R-14; also read from env)|
 | `HUNTER_IO_API_KEY`      | No       | —                        | Hunter.io API key (R-11)                          |
 | `GITHUB_TOKEN`           | No       | —                        | GitHub token (R-13)                               |
+| `ZAP_API_URL`            | No       | `http://zap:8080`        | OWASP ZAP REST API URL (internal Docker hostname) |
+| `ZAP_API_KEY`            | No       | —                        | ZAP API key — must match `api.key` in ZAP daemon  |
 
 ---
 
@@ -728,5 +739,9 @@ Flower is available at `http://localhost:5555`. It is bound to `127.0.0.1` only 
 | 9      | Professional report system               | Six-section report, WSTG v4.2 playbook, CVSS/NVD links, PDF    |
 | 10     | Module stability audit                   | stream_fn compatibility fix, validate_params None safety,      |
 |        |                                           | SHODAN_API_KEY env fallback for R-10 and R-14                  |
+| 11     | OWASP ZAP integration & evidence quality | ZAP-01 Spider, ZAP-02 Passive Audit, ZAP-03 Active Audit;      |
+|        |                                           | full HTTP request/response evidence from ZAP history;          |
+|        |                                           | NUL-byte sanitisation for PostgreSQL; scan status always        |
+|        |                                           | finalises on save error; scan detail 2-column grid redesign    |
 
-Total modules: 132
+Total modules: 135

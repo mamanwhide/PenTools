@@ -842,6 +842,10 @@ class CertTransparencyModule(BaseModule):
             "status": "done",
             "findings": findings,
             "raw_output": f"crt.sh returned {len(data)} certificates, {len(subdomains)} unique subdomains.",
+            "metadata": {
+                "subdomains": sorted(subdomains),
+                "total_subdomains": len(subdomains),
+            },
         }
 
 
@@ -1296,18 +1300,34 @@ class EmailHarvestingModule(BaseModule):
             runner = ToolRunner("theHarvester")
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
                 out_base = tf.name.replace(".json", "")
+            # theHarvester 4.x dropped google/bing; use only supported public sources
+            harvester_sources = "anubis,baidu,duckduckgo,hackertarget,otx,rapiddns,yahoo"
             try:
                 result = runner.run(
-                    args=["-d", domain, "-b", "google,bing,duckduckgo",
+                    args=["-d", domain, "-b", harvester_sources,
                           "-l", str(limit), "-f", out_base],
                     stream=stream, timeout=120,
                 )
                 out_file = out_base + ".json"
                 if os.path.exists(out_file):
-                    with open(out_file) as f:
-                        data = j.load(f)
-                    for e in data.get("emails", []):
-                        emails.add(e.lower())
+                    try:
+                        with open(out_file) as f:
+                            content = f.read().strip()
+                        if content:
+                            data = j.loads(content)
+                            for e in data.get("emails", []):
+                                emails.add(e.lower())
+                            # theHarvester may also put emails under 'email' (singular)
+                            for e in data.get("email", []):
+                                emails.add(e.lower())
+                        else:
+                            stream("warning", "theHarvester produced an empty JSON output; falling back to stdout regex.")
+                            for e in re.findall(self.EMAIL_RE, result.get("stdout", "")):
+                                emails.add(e.lower())
+                    except j.JSONDecodeError:
+                        stream("warning", "theHarvester JSON could not be parsed; falling back to stdout regex.")
+                        for e in re.findall(self.EMAIL_RE, result.get("stdout", "")):
+                            emails.add(e.lower())
                 else:
                     for e in re.findall(self.EMAIL_RE, result.get("stdout", "")):
                         emails.add(e.lower())

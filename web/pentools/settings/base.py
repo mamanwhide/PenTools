@@ -245,3 +245,7 @@ NOTIFICATION_SLACK_DEFAULT_WEBHOOK  = config("SLACK_WEBHOOK_URL",  default="")
 
 # ─── Reports ─────────────────────────────────────────────────────────────
 REPORTS_MEDIA_DIR = MEDIA_ROOT / "reports"
+
+# ─── OWASP ZAP ───────────────────────────────────────────────────────────
+ZAP_API_URL = config("ZAP_API_URL", default="http://zap:8080")
+ZAP_API_KEY = config("ZAP_API_KEY", default="")

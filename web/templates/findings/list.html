@@ -13,7 +13,7 @@
 </div>
 
 {# ── Stats ── #}
-<div class="grid grid-cols-5 gap-3 mb-6">
+<div class="grid grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
   {% with c=stats %}
   <div class="bg-surface-card border border-surface-border rounded p-3 text-center">
     <div class="text-2xl font-bold text-white">{{ c.total }}</div>
@@ -30,6 +30,14 @@
   <div class="bg-surface-card border border-yellow-500/20 rounded p-3 text-center">
     <div class="text-2xl font-bold text-yellow-400">{{ c.medium }}</div>
     <div class="text-xs text-gray-500 mt-1">Medium</div>
+  </div>
+  <div class="bg-surface-card border border-green-500/20 rounded p-3 text-center">
+    <div class="text-2xl font-bold text-green-400">{{ c.low }}</div>
+    <div class="text-xs text-gray-500 mt-1">Low</div>
+  </div>
+  <div class="bg-surface-card border border-sky-500/20 rounded p-3 text-center">
+    <div class="text-2xl font-bold text-sky-400">{{ c.info }}</div>
+    <div class="text-xs text-gray-500 mt-1">Info</div>
   </div>
   <div class="bg-surface-card border border-surface-border rounded p-3 text-center">
     <div class="text-2xl font-bold text-green-400">{{ c.open }}</div>

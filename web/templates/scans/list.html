@@ -3,9 +3,9 @@
 {% block title %}Scans — VulnX{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-white">Scans</h1>
+<div>
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-xl font-semibold" style="color:var(--text-1)">Scans</h1>
     <a href="{% url 'modules:list' %}"
        class="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors">
       + New Scan
@@ -70,6 +70,7 @@
           <td class="px-5 py-3 text-right font-mono text-sm">
             {% if job.critical_count %}<span class="text-red-400">{{ job.critical_count }}C </span>{% endif %}
             {% if job.high_count %}<span class="text-orange-400">{{ job.high_count }}H </span>{% endif %}
+            {% if job.medium_count %}<span class="text-yellow-400">{{ job.medium_count }}M </span>{% endif %}
             <span class="text-gray-500">{{ job.finding_count }}</span>
           </td>
           <td class="px-5 py-3 text-gray-500 text-xs font-mono">{{ job.created_at|date:"M d H:i" }}</td>

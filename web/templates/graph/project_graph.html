@@ -12,14 +12,14 @@ html,body{margin:0;padding:0}
 #graph-mount{width:100%;height:100%;background:#080b14;display:block}
 #graph-mount canvas{display:block}
 main>.p-6{padding:0!important}
-#top-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;border-bottom:1px solid #1c1e2e;background:#0d0f18;flex-shrink:0;z-index:10;flex-wrap:wrap;min-height:44px}
+#top-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;border-bottom:1px solid #21262d;background:#0d1117;flex-shrink:0;z-index:10;flex-wrap:wrap;min-height:44px}
 #graph-root{display:flex;flex-direction:column;overflow:hidden}
 #graph-body{display:flex;flex:1;overflow:hidden;min-height:0}
 #graph-wrap{flex:1;position:relative;overflow:hidden;min-width:0}
-#filter-sidebar{width:210px;flex-shrink:0;overflow-y:auto;padding:16px;background:#0d0f18;border-right:1px solid #1c1e2e}
-#detail-panel{width:300px;flex-shrink:0;overflow:hidden;display:none;flex-direction:column;background:#0d0f18;border-left:1px solid #1c1e2e}
+#filter-sidebar{width:210px;flex-shrink:0;overflow-y:auto;padding:16px;background:#0d1117;border-right:1px solid #21262d}
+#detail-panel{width:300px;flex-shrink:0;overflow:hidden;display:none;flex-direction:column;background:#0d1117;border-left:1px solid #21262d}
 #detail-panel.open{display:flex}
-#ctx-menu{position:fixed;z-index:9999;min-width:172px;background:#0f1016;border:1px solid #1c1e2e;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);padding:4px 0;font-size:12px;display:none}
+#ctx-menu{position:fixed;z-index:9999;min-width:172px;background:#161b22;border:1px solid #21262d;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.7);padding:4px 0;font-size:12px;display:none}
 #ctx-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 14px;color:#9ca3af;background:none;border:none;cursor:pointer;text-align:left;transition:background .12s,color .12s}
 #ctx-menu button:hover{background:#1c2130;color:#fff}
 .sev-critical{background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.3)}
@@ -27,40 +27,40 @@ main>.p-6{padding:0!important}
 .sev-medium{background:rgba(234,179,8,.15);color:#eab308;border-color:rgba(234,179,8,.3)}
 .sev-low{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.3)}
 .sev-info{background:rgba(100,116,139,.15);color:#94a3b8;border-color:rgba(100,116,139,.3)}
-.tag-btn{padding:3px 10px;font-size:11px;border-radius:6px;border:1px solid #1c1e2e;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.tag-btn.active{background:rgba(124,58,237,.2);color:#a78bfa;border-color:rgba(124,58,237,.5)}
-.tag-btn:not(.active){background:transparent;color:#4b5563;border-color:#1c1e2e}
+.tag-btn{padding:3px 10px;font-size:11px;border-radius:6px;border:1px solid #21262d;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.tag-btn.active{background:rgba(124,58,237,.2);color:#7dd3fc;border-color:rgba(124,58,237,.5)}
+.tag-btn:not(.active){background:transparent;color:#4b5563;border-color:#21262d}
 .tag-btn:not(.active):hover{color:#9ca3af;border-color:#374151}
 .dp-scan-link:hover{color:#a5b4fc!important}
-.dp-run-mod-link:hover{background:#6d28d9!important}
-.icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid #1c1e2e;background:transparent;cursor:pointer;color:#4b5563;transition:color .15s,border-color .15s,background .15s}
+.dp-run-mod-link:hover{background:#0284c7!important}
+.icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid #21262d;background:transparent;cursor:pointer;color:#4b5563;transition:color .15s,border-color .15s,background .15s}
 .icon-btn:hover{color:#e2e8f0;border-color:#374151}
-.icon-btn.active{color:#a78bfa;border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.12)}
-.mode-pill{display:flex;align-items:center;background:#12141e;border:1px solid #1c1e2e;border-radius:8px;padding:2px;gap:2px}
+.icon-btn.active{color:#7dd3fc;border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.12)}
+.mode-pill{display:flex;align-items:center;background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:2px;gap:2px}
 .mode-btn{padding:4px 12px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:background .15s,color .15s}
-.mode-btn.active{background:#7c3aed;color:#fff}
+.mode-btn.active{background:#0ea5e9;color:#fff}
 .mode-btn:not(.active){background:transparent;color:#4b5563}
 .mode-btn:not(.active):hover{color:#9ca3af}
 .filter-label{font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .filter-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
-.filter-row input[type=checkbox]{width:12px;height:12px;accent-color:#7c3aed;flex-shrink:0}
+.filter-row input[type=checkbox]{width:12px;height:12px;accent-color:#0ea5e9;flex-shrink:0}
 .filter-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .filter-row .sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .filter-row .lbl{font-size:12px;color:#6b7280;flex:1}
 .filter-row .cnt{font-size:10px;font-family:monospace;color:#374151}
-.stat-pill{font-size:10px;font-family:monospace;border:1px solid #1c1e2e;color:#4b5563;padding:2px 8px;border-radius:4px}
+.stat-pill{font-size:10px;font-family:monospace;border:1px solid #21262d;color:#4b5563;padding:2px 8px;border-radius:4px}
 .zoom-ctrl{display:flex;flex-direction:column;gap:6px;position:absolute;top:12px;right:12px;z-index:5}
-.zoom-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(13,15,24,.85);border:1px solid #1c1e2e;border-radius:7px;cursor:pointer;color:#6b7280;font-size:16px;line-height:1;transition:color .15s,border-color .15s}
+.zoom-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(13,15,24,.85);border:1px solid #21262d;border-radius:7px;cursor:pointer;color:#6b7280;font-size:16px;line-height:1;transition:color .15s,border-color .15s}
 .zoom-btn:hover{color:#fff;border-color:#374151}
 #empty-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;color:#1f2937}
-#graph-legend{position:absolute;bottom:12px;left:12px;z-index:5;background:rgba(13,15,24,.9);border:1px solid #1c1e2e;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+#graph-legend{position:absolute;bottom:12px;left:12px;z-index:5;background:rgba(13,15,24,.9);border:1px solid #21262d;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
 #graph-legend .leg-row{display:flex;align-items:center;gap:6px;font-size:10px;color:#4b5563}
 .loading-overlay{position:absolute;inset:0;background:rgba(8,11,20,.85);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{animation:spin .8s linear infinite}
 
 /* ── Dark / Light mode vars ──────────────────────────────── */
-:root{ --graph-bg:#080b14; --ui-bg:#0d0f18; --panel-bg:#0f1016; --border:#1c1e2e; --text-muted:#4b5563; --text-main:#e2e8f0; }
+:root{ --graph-bg:#080b14; --ui-bg:#0d1117; --panel-bg:#161b22; --border:#21262d; --text-muted:#4b5563; --text-main:#e2e8f0; }
 .theme-light{ --graph-bg:#f1f5f9; --ui-bg:#f8fafc; --panel-bg:#ffffff; --border:#e2e8f0; --text-muted:#9ca3af; --text-main:#111827; }
 
 #graph-root            { background:var(--graph-bg); }
@@ -111,24 +111,18 @@ main>.p-6{padding:0!important}
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
     </button>
 
-    <!-- dark / light theme toggle -->
-    <button id="btn-theme" title="Toggle dark / light mode" onclick="APP.toggleTheme()">
-      <svg id="icon-sun" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-      <svg id="icon-moon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-    </button>
-
     <button class="icon-btn" id="btn-filter" title="Filters" onclick="APP.toggleSidebar()">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
     </button>
 
     <div style="position:relative">
       <svg width="12" height="12" fill="none" stroke="#4b5563" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:8px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input id="search-input" type="text" placeholder="Search&hellip;" oninput="APP.onSearch(this.value)" style="width:140px;background:#12141e;border:1px solid #1c1e2e;color:#d1d5db;border-radius:8px;padding:5px 10px 5px 26px;font-size:11px;outline:none" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#1c1e2e'">
+      <input id="search-input" type="text" placeholder="Search&hellip;" oninput="APP.onSearch(this.value)" style="width:140px;background:#0d1117;border:1px solid #21262d;color:#d1d5db;border-radius:8px;padding:5px 10px 5px 26px;font-size:11px;outline:none" onfocus="this.style.borderColor='#0ea5e9'" onblur="this.style.borderColor='#21262d'">
     </div>
 
     <div style="position:relative" id="export-wrap">
       <button class="tag-btn" onclick="document.getElementById('export-dd').style.display=document.getElementById('export-dd').style.display==='block'?'none':'block'">Export &#9662;</button>
-      <div id="export-dd" style="display:none;position:absolute;right:0;top:calc(100% + 4px);width:160px;background:#0d0f18;border:1px solid #1c1e2e;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:100;padding:4px 0">
+      <div id="export-dd" style="display:none;position:absolute;right:0;top:calc(100% + 4px);width:160px;background:#0d1117;border:1px solid #21262d;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:100;padding:4px 0">
         <button onclick="APP.exportPNG();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export as PNG</button>
         <button onclick="APP.exportJSON();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export JSON</button>
         <button onclick="APP.exportCSV();document.getElementById('export-dd').style.display='none'" style="width:100%;padding:8px 14px;background:none;border:none;color:#6b7280;font-size:11px;text-align:left;cursor:pointer" onmouseover="this.style.color='#fff';this.style.background='#1c2130'" onmouseout="this.style.color='#6b7280';this.style.background='none'">Export CSV</button>
@@ -151,12 +145,12 @@ main>.p-6{padding:0!important}
     <!-- FILTER SIDEBAR -->
     <div id="filter-sidebar" style="display:none">
       <div class="filter-label">Node Type</div>
-      <label class="filter-row"><input type="checkbox" id="ft-project" checked onchange="APP.filterChange()"><span class="sq" style="background:#7c3aed"></span><span class="lbl">Project</span><span class="cnt" id="cnt-project">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="ft-project" checked onchange="APP.filterChange()"><span class="sq" style="background:#0ea5e9"></span><span class="lbl">Project</span><span class="cnt" id="cnt-project">0</span></label>
       <label class="filter-row"><input type="checkbox" id="ft-target" checked onchange="APP.filterChange()"><span class="sq" style="background:#3b82f6"></span><span class="lbl">Targets</span><span class="cnt" id="cnt-target">0</span></label>
-      <label class="filter-row"><input type="checkbox" id="ft-module_run" checked onchange="APP.filterChange()"><span class="dot" style="background:#a78bfa"></span><span class="lbl">Module Runs</span><span class="cnt" id="cnt-module_run">0</span></label>
+      <label class="filter-row"><input type="checkbox" id="ft-module_run" checked onchange="APP.filterChange()"><span class="dot" style="background:#7dd3fc"></span><span class="lbl">Module Runs</span><span class="cnt" id="cnt-module_run">0</span></label>
       <label class="filter-row"><input type="checkbox" id="ft-finding" checked onchange="APP.filterChange()"><span class="dot" style="background:#ef4444"></span><span class="lbl">Findings</span><span class="cnt" id="cnt-finding">0</span></label>
 
-      <div style="border-top:1px solid #1c1e2e;margin:12px 0"></div>
+      <div style="border-top:1px solid #21262d;margin:12px 0"></div>
       <div class="filter-label">Severity</div>
       <label class="filter-row"><input type="checkbox" id="fs-critical" checked onchange="APP.filterChange()"><span class="dot" style="background:#ef4444"></span><span class="lbl">Critical</span><span class="cnt" id="cnt-sev-critical">0</span></label>
       <label class="filter-row"><input type="checkbox" id="fs-high" checked onchange="APP.filterChange()"><span class="dot" style="background:#f97316"></span><span class="lbl">High</span><span class="cnt" id="cnt-sev-high">0</span></label>
@@ -164,8 +158,8 @@ main>.p-6{padding:0!important}
       <label class="filter-row"><input type="checkbox" id="fs-low" checked onchange="APP.filterChange()"><span class="dot" style="background:#38bdf8"></span><span class="lbl">Low</span><span class="cnt" id="cnt-sev-low">0</span></label>
       <label class="filter-row"><input type="checkbox" id="fs-info" checked onchange="APP.filterChange()"><span class="dot" style="background:#64748b"></span><span class="lbl">Info</span><span class="cnt" id="cnt-sev-info">0</span></label>
 
-      <div style="border-top:1px solid #1c1e2e;margin:12px 0"></div>
-      <button onclick="APP.resetFilters()" style="width:100%;padding:7px;font-size:11px;border:1px solid #1c1e2e;border-radius:8px;background:none;color:#6b7280;cursor:pointer" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Reset filters</button>
+      <div style="border-top:1px solid #21262d;margin:12px 0"></div>
+      <button onclick="APP.resetFilters()" style="width:100%;padding:7px;font-size:11px;border:1px solid #21262d;border-radius:8px;background:none;color:#6b7280;cursor:pointer" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Reset filters</button>
     </div>
 
     <!-- GRAPH CANVAS AREA -->
@@ -174,7 +168,7 @@ main>.p-6{padding:0!important}
 
       <!-- loading overlay -->
       <div class="loading-overlay" id="loading-overlay">
-        <svg width="32" height="32" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24" class="spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <svg width="32" height="32" fill="none" stroke="#0ea5e9" stroke-width="2" viewBox="0 0 24 24" class="spin"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         <span style="font-size:12px;color:#4b5563">Building graph&hellip;</span>
       </div>
 
@@ -196,11 +190,11 @@ main>.p-6{padding:0!important}
 
       <!-- legend -->
       <div id="graph-legend">
-        <div class="leg-row"><span class="sq" style="background:#7c3aed;width:8px;height:8px;border-radius:2px;flex-shrink:0"></span>Project root</div>
+        <div class="leg-row"><span class="sq" style="background:#0ea5e9;width:8px;height:8px;border-radius:2px;flex-shrink:0"></span>Project root</div>
         <div class="leg-row"><span class="sq" style="background:#3b82f6;width:8px;height:8px;border-radius:2px;flex-shrink:0"></span>Target</div>
-        <div class="leg-row"><span class="dot" style="background:#a78bfa;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>Module run</div>
+        <div class="leg-row"><span class="dot" style="background:#7dd3fc;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>Module run</div>
         <div class="leg-row"><span class="dot" style="background:#ef4444;width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>Finding</div>
-        <div id="legend-3d-hint" style="border-top:1px solid #1c1e2e;margin-top:5px;padding-top:5px;display:flex;flex-direction:column;gap:3px">
+        <div id="legend-3d-hint" style="border-top:1px solid #21262d;margin-top:5px;padding-top:5px;display:flex;flex-direction:column;gap:3px">
           <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#9670;</span>critical</div>
           <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#9830;</span>high</div>
           <div class="leg-row" style="color:#374151"><span style="font-family:monospace;font-size:9px;margin-right:2px">&#8857;</span>medium</div>
@@ -211,7 +205,7 @@ main>.p-6{padding:0!important}
 
     <!-- DETAIL PANEL -->
     <div id="detail-panel">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1c1e2e;flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #21262d;flex-shrink:0">
         <div style="display:flex;align-items:center;gap:8px">
           <span id="dp-color" style="width:10px;height:10px;border-radius:2px;background:#64748b;flex-shrink:0"></span>
           <span id="dp-type" style="font-size:12px;font-weight:600;color:#e2e8f0">Node</span>
@@ -223,8 +217,8 @@ main>.p-6{padding:0!important}
 
       <div id="dp-body" style="flex:1;overflow-y:auto;padding:16px;font-size:12px;display:flex;flex-direction:column;gap:12px"></div>
 
-      <div style="border-top:1px solid #1c1e2e;padding:10px 14px;display:flex;gap:8px;flex-shrink:0">
-        <button id="dp-copy" onclick="APP.copyNode()" style="flex:1;padding:7px;font-size:11px;border:1px solid #1c1e2e;border-radius:8px;background:none;color:#6b7280;cursor:pointer;transition:color .15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Copy Value</button>
+      <div style="border-top:1px solid #21262d;padding:10px 14px;display:flex;gap:8px;flex-shrink:0">
+        <button id="dp-copy" onclick="APP.copyNode()" style="flex:1;padding:7px;font-size:11px;border:1px solid #21262d;border-radius:8px;background:none;color:#6b7280;cursor:pointer;transition:color .15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#6b7280'">Copy Value</button>
         <button id="dp-confirm" onclick="APP.quickConfirm()" style="display:none;flex:1;padding:7px;font-size:11px;border:1px solid rgba(34,197,94,.3);border-radius:8px;background:none;color:#4ade80;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(34,197,94,.08)'" onmouseout="this.style.background='none'">Confirm</button>
       </div>
     </div>
@@ -265,7 +259,7 @@ const CSRF       = "{{ csrf_token }}";
 
 // Colour constants
 const SEV_COLOR  = {critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#38bdf8",info:"#64748b"};
-const TYPE_COLOR = {project:"#7c3aed",target:"#3b82f6",module_run:"#a78bfa"};
+const TYPE_COLOR = {project:"#0ea5e9",target:"#3b82f6",module_run:"#7dd3fc"};
 const TYPE_ABBR  = {project:"P",target:"T",module_run:"M",finding:"F"};
 
 function nColor(n){ return n.node_type==="finding"?(SEV_COLOR[n.severity]||"#64748b"):(TYPE_COLOR[n.node_type]||"#64748b"); }
@@ -279,7 +273,7 @@ function nSize(n){
 // State
 let mode="3d", fg2=null, fg3=null, rawData={nodes:[],links:[]};
 let showLabels=true, showSidebar=false, selNode=null, searchQuery="";
-let ws=null, graphTheme="dark";
+let ws=null, graphTheme=document.documentElement.getAttribute('data-theme')||'dark';
 
 // ── Boot ──────────────────────────────────────────────────────────────────
 window.APP = {
@@ -320,14 +314,7 @@ window.APP = {
 
   reload(){ const ic=document.getElementById("reload-icon"); ic.classList.add("spin"); loadData().finally(()=>ic.classList.remove("spin")); },
 
-  toggleTheme(){
-    graphTheme = graphTheme==="dark" ? "light" : "dark";
-    const root=document.getElementById("graph-root");
-    root.classList.toggle("theme-light", graphTheme==="light");
-    document.getElementById("icon-sun").style.display  = graphTheme==="light" ? "block" : "none";
-    document.getElementById("icon-moon").style.display = graphTheme==="dark"  ? "block" : "none";
-    renderGraph();
-  },
+  toggleTheme(){ /* no-op: theme is now driven by the global topbar toggle */ },
 
   zoomIn()  { fg2&&fg2.zoom(fg2.zoom()*1.3,250); },
   zoomOut() { fg2&&fg2.zoom(fg2.zoom()*0.77,250); },
@@ -638,12 +625,12 @@ function openDetail(n){
     html+="</div>";
     if(n.url)         html+=row("URL","<span style='font-family:monospace;font-size:10px;color:#60a5fa;word-break:break-all'>"+esc(n.url)+"</span>");
     if(n.description) html+=row("Description","<span style='color:#9ca3af;line-height:1.5'>"+esc(n.description)+"</span>");
-    if(n.evidence)    html+=row("Evidence","<pre style='background:#0d0f18;color:#4ade80;border-radius:6px;padding:8px;font-size:10px;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid #1c1e2e'>"+esc(n.evidence)+"</pre>");
+    if(n.evidence)    html+=row("Evidence","<pre style='background:#0d1117;color:#4ade80;border-radius:6px;padding:8px;font-size:10px;white-space:pre-wrap;word-break:break-all;margin:0;border:1px solid #21262d'>"+esc(n.evidence)+"</pre>");
     if(n.remediation) html+=row("Remediation","<span style='color:#6b7280'>"+esc(n.remediation)+"</span>");
-    html+=row("Status","<select id='dp-status-sel' style='width:100%;background:#12141e;border:1px solid #1c1e2e;color:#d1d5db;border-radius:8px;padding:6px 10px;font-size:11px;outline:none'><option value='open'"+(n.status==="open"?" selected":"")+" >Open</option><option value='confirmed'"+(n.status==="confirmed"?" selected":"")+">Confirmed</option><option value='fp'"+(n.status==="fp"?" selected":"")+">False Positive</option><option value='fixed'"+(n.status==="fixed"?" selected":"")+">Fixed</option><option value='wontfix'"+(n.status==="wontfix"?" selected":"")+">Would Not Fix</option></select>");
-    html+=row("Notes","<textarea id='dp-notes-ta' rows='3' placeholder='Analyst notes…' style='width:100%;background:#12141e;border:1px solid #1c1e2e;color:#e2e8f0;border-radius:8px;padding:7px 10px;font-size:11px;outline:none;resize:none;box-sizing:border-box'>"+esc(n.notes||"")+"</textarea>");
+    html+=row("Status","<select id='dp-status-sel' style='width:100%;background:#0d1117;border:1px solid #21262d;color:#d1d5db;border-radius:8px;padding:6px 10px;font-size:11px;outline:none'><option value='open'"+(n.status==="open"?" selected":"")+" >Open</option><option value='confirmed'"+(n.status==="confirmed"?" selected":"")+">Confirmed</option><option value='fp'"+(n.status==="fp"?" selected":"")+">False Positive</option><option value='fixed'"+(n.status==="fixed"?" selected":"")+">Fixed</option><option value='wontfix'"+(n.status==="wontfix"?" selected":"")+">Would Not Fix</option></select>");
+    html+=row("Notes","<textarea id='dp-notes-ta' rows='3' placeholder='Analyst notes…' style='width:100%;background:#0d1117;border:1px solid #21262d;color:#e2e8f0;border-radius:8px;padding:7px 10px;font-size:11px;outline:none;resize:none;box-sizing:border-box'>"+esc(n.notes||"")+"</textarea>");
   } else if(n.node_type==="module_run"){
-    html+=row("Module","<span style='font-family:monospace;color:#a78bfa'>"+esc(n.module_id||"")+"</span>");
+    html+=row("Module","<span style='font-family:monospace;color:#7dd3fc'>"+esc(n.module_id||"")+"</span>");
     const sc=n.status==="done"?"#4ade80":n.status==="running"?"#facc15":n.status==="failed"?"#f87171":"#6b7280";
     html+=row("Status","<span style='color:"+sc+";font-family:monospace;text-transform:uppercase;font-size:11px'>"+esc(n.status||"")+"</span>");
     html+=row("Findings","<span style='color:#e2e8f0;font-family:monospace'>"+esc(String(n.finding_count||0))+"</span>");
@@ -653,7 +640,7 @@ function openDetail(n){
     html+=row("Value","<span style='font-family:monospace;color:#60a5fa;word-break:break-all'>"+esc(n.value||n.label||"")+"</span>");
     html+=row("Type","<span style='color:#d1d5db;text-transform:uppercase;font-size:10px;font-family:monospace'>"+esc(n.target_type||"domain")+"</span>");
     html+=row("Scope","<span style='color:"+(n.is_in_scope?"#4ade80":"#6b7280")+"'>"+( n.is_in_scope?"In-scope":"Out of scope")+"</span>");
-    html+="<a href='/modules/?target="+esc(n.target_id||"")+"' class='dp-run-mod-link' style='display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:#7c3aed;color:#fff;border-radius:8px;font-size:11px;text-decoration:none;transition:background .15s'><svg width='12' height='12' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' d='M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z'/></svg>Run Module</a>";
+    html+="<a href='/modules/?target="+esc(n.target_id||"")+"' class='dp-run-mod-link' style='display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:11px;text-decoration:none;transition:background .15s'><svg width='12' height='12' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' d='M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z'/></svg>Run Module</a>";
   } else {
     html+=row("Name","<strong style='color:#e2e8f0'>"+esc(n.label||n.value||"")+"</strong>");
     if(n.description) html+=row("Description","<span style='color:#6b7280'>"+esc(n.description)+"</span>");
@@ -720,6 +707,16 @@ document.addEventListener("click",ev=>{
 
 // Boot
 document.addEventListener("DOMContentLoaded",()=>APP.init());
+
+// ── Sync graph theme whenever the global data-theme attribute changes ────────
+new MutationObserver(function(mutations){
+  mutations.forEach(function(m){
+    if(m.attributeName==="data-theme"){
+      graphTheme=document.documentElement.getAttribute("data-theme")||"dark";
+      renderGraph();
+    }
+  });
+}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 
 })();
 </script>

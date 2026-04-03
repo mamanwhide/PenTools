@@ -34,7 +34,7 @@
           <input type="text" name="name" id="id_name"
                  value="{{ form_data.name|default:'' }}"
                  placeholder="Friendly label, e.g. Production API"
-                 class="w-full bg-[#12141e] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
+                 class="w-full bg-[#0d1117] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
         </div>
 
         <div>
@@ -42,7 +42,7 @@
             Target Type <span class="text-critical">*</span>
           </label>
           <select name="target_type" id="id_target_type"
-                  class="w-full bg-[#12141e] border border-surface-border text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
+                  class="w-full bg-[#0d1117] border border-surface-border text-white text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
             {% for val, label in target_types %}
             <option value="{{ val }}" {% if form_data.target_type == val %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -56,7 +56,7 @@
           <input type="text" name="value" id="id_value"
                  value="{{ form_data.value|default:'' }}"
                  placeholder="https://example.com, 192.168.1.0/24, etc."
-                 class="w-full bg-[#12141e] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
+                 class="w-full bg-[#0d1117] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors">
         </div>
 
         <div>
@@ -66,13 +66,13 @@
           <textarea name="description" id="id_description"
                     rows="2"
                     placeholder="Notes about this target..."
-                    class="w-full bg-[#12141e] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors resize-none">{{ form_data.description|default:'' }}</textarea>
+                    class="w-full bg-[#0d1117] border border-surface-border text-white placeholder-gray-700 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors resize-none">{{ form_data.description|default:'' }}</textarea>
         </div>
 
         <div class="flex items-center gap-3">
           <input type="checkbox" name="is_in_scope" id="id_is_in_scope"
                  {% if form_data.is_in_scope %}checked{% endif %}
-                 class="w-4 h-4 rounded border-surface-border bg-[#12141e] text-accent focus:ring-accent/30">
+                 class="w-4 h-4 rounded border-surface-border bg-[#0d1117] text-accent focus:ring-accent/30">
           <label class="text-sm text-gray-400" for="id_is_in_scope">In scope</label>
         </div>
       </div>

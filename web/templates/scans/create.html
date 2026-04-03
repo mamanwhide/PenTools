@@ -78,7 +78,7 @@
           <select name="project_id"
                   x-model="selectedProject"
                   @change="updateTargets()"
-                  class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                  class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
             <option value="">— None —</option>
             {% for project in projects %}
             <option value="{{ project.id }}">{{ project.name }}</option>
@@ -88,7 +88,7 @@
         <div>
           <label class="block text-xs text-gray-400 mb-1.5">Target</label>
           <select name="target_id"
-                  class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                  class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
             <option value="">— None —</option>
             <template x-for="t in availableTargets" :key="t.id">
               <option :value="t.id" x-text="t.name + ' (' + t.value + ')'"></option>
@@ -128,7 +128,7 @@
             <template x-if="field.type === 'url'">
               <input type="url" :name="field.name" x-model="params[field.name]"
                      :placeholder="field.placeholder || 'https://'" :required="field.required"
-                     class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" />
+                     class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" />
             </template>
 
             <!-- text (with optional password masking for sensitive) -->
@@ -137,7 +137,7 @@
                 <input :type="field.sensitive && !showSensitive[field.name] ? 'password' : 'text'"
                        :name="field.name" x-model="params[field.name]"
                        :placeholder="field.placeholder || ''" :required="field.required"
-                       class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent pr-9" />
+                       class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent pr-9" />
                 <button x-show="field.sensitive" type="button"
                         @click="showSensitive[field.name] = !showSensitive[field.name]"
                         class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
@@ -154,7 +154,7 @@
               <textarea :name="field.name" rows="3"
                         :placeholder="field.placeholder || ''"
                         x-model="params[field.name]"
-                        class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea>
+                        class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea>
             </template>
 
             <!-- number -->
@@ -162,13 +162,13 @@
               <input type="number" :name="field.name"
                      :min="field.min" :max="field.max" :step="field.step || 1"
                      x-model.number="params[field.name]"
-                     class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" />
+                     class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" />
             </template>
 
             <!-- select -->
             <template x-if="field.type === 'select'">
               <select :name="field.name" x-model="params[field.name]"
-                      class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                      class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
                 <template x-for="opt in normalizeOptions(field.options)" :key="opt.value">
                   <option :value="opt.value" x-text="opt.label"></option>
                 </template>
@@ -201,7 +201,7 @@
                     <input type="checkbox" :name="field.name" :value="opt.value"
                            :checked="(params[field.name] || []).includes(opt.value)"
                            @change="toggleCheckbox(field.name, opt.value)"
-                           class="w-4 h-4 rounded border-surface-border bg-[#12141e] accent-violet-600 focus:ring-accent/30" />
+                           class="w-4 h-4 rounded border-surface-border bg-[#0d1117] accent-sky-500 focus:ring-accent/30" />
                     <span class="text-sm text-gray-300" x-text="opt.label"></span>
                   </label>
                 </template>
@@ -228,7 +228,7 @@
                 <input type="range" :name="field.name"
                        :min="field.min || 1" :max="field.max || 100" :step="field.step || 1"
                        x-model.number="params[field.name]"
-                       class="flex-1 accent-violet-600" />
+                       class="flex-1 accent-sky-500" />
                 <span class="font-mono text-sm text-white w-14 text-right bg-surface-border px-2 py-0.5 rounded"
                       x-text="params[field.name]"></span>
               </div>
@@ -239,7 +239,7 @@
               <textarea :name="field.name" rows="3"
                         placeholder="X-Header: value&#10;Another-Header: val"
                         x-model="params[field.name]"
-                        class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent"></textarea>
+                        class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent"></textarea>
             </template>
 
             <!-- json_editor -->
@@ -249,7 +249,7 @@
                           :placeholder="field.placeholder || '{\n  &quot;key&quot;: &quot;value&quot;\n}'"
                           x-model="params[field.name]"
                           @blur="validateJson(field.name)"
-                          class="w-full bg-[#0d0f18] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"
+                          class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"
                           :class="jsonErrors[field.name] ? 'border-critical' : ''"></textarea>
                 <p x-show="jsonErrors[field.name]" x-text="'⚠ ' + jsonErrors[field.name]"
                    class="mt-1 text-xs text-critical font-mono"></p>
@@ -260,7 +260,7 @@
             <template x-if="field.type === 'wordlist_select'">
               <div class="space-y-2">
                 <select :name="field.name" x-model="params[field.name]"
-                        class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                        class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
                   <option value="">— Custom upload —</option>
                   <optgroup label="Subdomains">
                     <option value="builtin:subdomains-medium">Subdomains Medium (50k)</option>
@@ -293,13 +293,13 @@
               <textarea :name="field.name" rows="8"
                         x-model="params[field.name]"
                         :placeholder="field.placeholder || ''"
-                        class="w-full bg-[#0d0f18] border border-surface-border text-green-400 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea>
+                        class="w-full bg-[#0d1117] border border-surface-border text-green-400 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea>
             </template>
 
             <!-- auth_block -->
             <template x-if="field.type === 'auth_block'">
               <select :name="field.name" x-model="params[field.name]"
-                      class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
+                      class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent">
                 <option value="none">No Authentication</option>
                 <option value="bearer_jwt">Bearer JWT Token</option>
                 <option value="basic">Basic Auth (user:pass)</option>
@@ -357,14 +357,14 @@
               <span x-show="field.sensitive" class="text-[10px] font-mono text-purple-400/70 border border-purple-800/40 px-1 rounded">[sensitive]</span>
             </div>
             <!-- Reuse same field types for advanced section -->
-            <template x-if="field.type === 'url'"><input type="url" :name="field.name" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
-            <template x-if="field.type === 'text'"><input :type="field.sensitive && !showSensitive[field.name] ? 'password' : 'text'" :name="field.name" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
-            <template x-if="field.type === 'textarea'"><textarea :name="field.name" rows="3" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea></template>
-            <template x-if="field.type === 'number'"><input type="number" :name="field.name" x-model.number="params[field.name]" :min="field.min" :max="field.max" :step="field.step||1" class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
-            <template x-if="field.type === 'select'"><select :name="field.name" x-model="params[field.name]" class="w-full bg-[#12141e] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"><template x-for="opt in normalizeOptions(field.options)" :key="opt.value"><option :value="opt.value" x-text="opt.label"></option></template></select></template>
+            <template x-if="field.type === 'url'"><input type="url" :name="field.name" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
+            <template x-if="field.type === 'text'"><input :type="field.sensitive && !showSensitive[field.name] ? 'password' : 'text'" :name="field.name" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
+            <template x-if="field.type === 'textarea'"><textarea :name="field.name" rows="3" x-model="params[field.name]" :placeholder="field.placeholder || ''" class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent resize-y"></textarea></template>
+            <template x-if="field.type === 'number'"><input type="number" :name="field.name" x-model.number="params[field.name]" :min="field.min" :max="field.max" :step="field.step||1" class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent" /></template>
+            <template x-if="field.type === 'select'"><select :name="field.name" x-model="params[field.name]" class="w-full bg-[#0d1117] border border-surface-border text-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"><template x-for="opt in normalizeOptions(field.options)" :key="opt.value"><option :value="opt.value" x-text="opt.label"></option></template></select></template>
             <template x-if="field.type === 'toggle'"><label class="flex items-center gap-3 cursor-pointer"><input type="hidden" :name="field.name" :value="params[field.name] ? 'true' : 'false'" /><div @click="params[field.name] = !params[field.name]" class="w-10 h-5 rounded-full transition-colors duration-200 relative" :class="params[field.name] ? 'bg-accent' : 'bg-surface-border'"><span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200" :class="params[field.name] ? 'translate-x-5' : ''"></span></div><span class="text-sm text-gray-400" x-text="params[field.name] ? 'Enabled' : 'Disabled'"></span></label></template>
-            <template x-if="field.type === 'range_slider'"><div class="flex items-center gap-3"><input type="range" :name="field.name" :min="field.min||1" :max="field.max||100" :step="field.step||1" x-model.number="params[field.name]" class="flex-1 accent-violet-600" /><span class="font-mono text-sm text-white w-14 text-right bg-surface-border px-2 py-0.5 rounded" x-text="params[field.name]"></span></div></template>
-            <template x-if="field.type === 'header_list'"><textarea :name="field.name" rows="3" placeholder="X-Header: value" x-model="params[field.name]" class="w-full bg-[#12141e] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent"></textarea></template>
+            <template x-if="field.type === 'range_slider'"><div class="flex items-center gap-3"><input type="range" :name="field.name" :min="field.min||1" :max="field.max||100" :step="field.step||1" x-model.number="params[field.name]" class="flex-1 accent-sky-500" /><span class="font-mono text-sm text-white w-14 text-right bg-surface-border px-2 py-0.5 rounded" x-text="params[field.name]"></span></div></template>
+            <template x-if="field.type === 'header_list'"><textarea :name="field.name" rows="3" placeholder="X-Header: value" x-model="params[field.name]" class="w-full bg-[#0d1117] border border-surface-border text-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-accent"></textarea></template>
             <template x-if="field.type === 'file_upload'"><div class="space-y-1"><input type="file" :name="field.name" class="w-full text-xs text-gray-400 file:bg-surface-border file:text-gray-300 file:border-0 file:rounded-lg file:px-3 file:py-2 file:text-xs file:cursor-pointer hover:file:bg-surface-hover file:mr-3 file:font-medium" /><p class="text-[10px] text-gray-600" x-text="field.help_text || 'Upload a file'"></p></div></template>
             <p x-show="field.help_text && field.help_text.length" x-text="field.help_text" class="mt-1 text-xs text-gray-600"></p>
           </div>
@@ -401,7 +401,7 @@
       <h3 class="text-sm font-semibold text-white mb-4">Save Configuration</h3>
       <input type="text" x-model="configName" @keydown.enter="saveConfig()"
              placeholder="e.g. slow-scan, auth-test"
-             class="w-full bg-[#12141e] border border-surface-border text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent mb-2" />
+             class="w-full bg-[#0d1117] border border-surface-border text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent mb-2" />
       <p x-show="saveError" x-text="saveError" class="text-xs text-critical mb-2"></p>
       <div class="flex gap-2 mt-3">
         <button @click="saveConfig()" :disabled="!configName.trim()"
@@ -425,7 +425,7 @@
           <span x-text="curlCopied ? 'Copied!' : 'Copy'"></span>
         </button>
       </div>
-      <pre class="bg-[#0d0f18] rounded-lg p-4 text-xs text-green-400 font-mono overflow-x-auto max-h-72 whitespace-pre-wrap break-all"
+      <pre class="bg-[#0d1117] rounded-lg p-4 text-xs text-green-400 font-mono overflow-x-auto max-h-72 whitespace-pre-wrap break-all"
            x-text="curlCommand"></pre>
       <p class="text-xs text-gray-600 mt-2">CSRF token and session cookie are read directly from your current browser session.</p>
       <button @click="showCurlModal = false"

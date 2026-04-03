@@ -122,6 +122,34 @@ services:
       - wordlists:/wordlists
     restart: "no"   # One-time setup container
 
+  # ─── OWASP ZAP (Daemon mode — REST API on port 8080) ────────────────────
+  # Used by ZAP-01 (Spider), ZAP-02 (Passive Audit), ZAP-03 (Active Audit).
+  # The API key is read from ZAP_API_KEY in .env.
+  # Celery workers reach ZAP via http://zap:8080 (service DNS).
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    command: >
+      zap.sh -daemon
+        -host 0.0.0.0
+        -port 8080
+        -config api.key=${ZAP_API_KEY:-changeme}
+        -config api.addrs.addr.name=.*
+        -config api.addrs.addr.regex=true
+        -config connection.timeoutInSecs=60
+        -config scanner.maxRuleDurationInMins=10
+        -config scanner.maxScanDurationInMins=60
+    expose:
+      - "8080"
+    volumes:
+      - zap_data:/home/zap
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/JSON/core/view/version/?apikey=${ZAP_API_KEY:-changeme} || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 6
+      start_period: 60s
+    restart: unless-stopped
+
   # ─── Nginx (Reverse Proxy) ──────────────────────────────────
   nginx:
     image: nginx:1.26-alpine
@@ -142,3 +170,4 @@ volumes:
   tools_bin:
   wordlists:
   scan_output:
+  zap_data:

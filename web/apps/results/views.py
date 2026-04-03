@@ -68,6 +68,8 @@ def finding_list(request):
         "critical": qs.filter(severity="critical").count(),
         "high":     qs.filter(severity="high").count(),
         "medium":   qs.filter(severity="medium").count(),
+        "low":      qs.filter(severity="low").count(),
+        "info":     qs.filter(severity="info").count(),
         "open":     qs.filter(status="open").count(),
     }
 

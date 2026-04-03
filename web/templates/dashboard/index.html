@@ -1,104 +1,170 @@
 {% extends "base/base.html" %}
-{% block title %}Dashboard \u2014 VulnX PenTools{% endblock %}
+{% block title %}Security Overview — VulnX PenTools{% endblock %}
 
 {% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
-/* ─── Dashboard-specific locals ─────────────────────────────── */
-.stat-card {
-  position:relative; overflow:hidden;
-  background:#0f1016; border:1px solid #1c1e2e;
-  border-radius:14px; padding:20px 20px 16px;
-  transition:border-color .2s, transform .15s;
-}
-.stat-card:hover { transform:translateY(-1px); }
-.stat-card::before {
-  content:''; position:absolute;
-  top:0; left:0; right:0; height:2px;
-  border-radius:14px 14px 0 0;
-}
-.stat-card.c-default::before { background:linear-gradient(90deg,#1c1e2e,transparent); }
-.stat-card.c-critical::before { background:linear-gradient(90deg,#ef4444,transparent); }
-.stat-card.c-high::before    { background:linear-gradient(90deg,#f97316,transparent); }
-.stat-card.c-ok::before      { background:linear-gradient(90deg,#22c55e,transparent); }
-.stat-card.c-info::before    { background:linear-gradient(90deg,#38bdf8,transparent); }
-.stat-glow-critical { box-shadow:0 0 0 1px rgba(239,68,68,.15) inset; }
-.stat-glow-high     { box-shadow:0 0 0 1px rgba(249,115,22,.15) inset; }
+/* ─── SOC Dashboard ─────────────────────────────────────────────────── */
 
-.qa-card {
-  display:flex; align-items:center; gap:12px;
-  padding:12px 14px; background:#0f1016;
-  border:1px solid #1c1e2e; border-radius:12px;
-  text-decoration:none; transition:border-color .2s, background .2s;
+/* Stat cards */
+.metric-card {
+  position: relative; overflow: hidden;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 22px 18px;
+  transition: border-color .2s, transform .15s;
 }
-.qa-card:hover { border-color:#2d2f4a; background:#12141e; }
-.qa-icon {
-  width:36px; height:36px; border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
+.metric-card:hover { transform: translateY(-1px); border-color: var(--border-muted); }
+.metric-card .metric-accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 12px 12px 0 0;
 }
 
-.sev-bar-wrap { display:flex; height:6px; border-radius:99px; overflow:hidden; gap:1px; }
-.sev-seg { height:100%; transition:flex .5s ease; }
-
-.badge {
-  display:inline-flex; align-items:center; gap:5px;
-  padding:2px 8px; border-radius:999px;
-  font-size:10px; font-weight:600; border:1px solid;
-  text-transform:uppercase; letter-spacing:.04em;
+/* Panel cards */
+.panel {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
 }
-.badge-done     { background:rgba(34,197,94,.1);  color:#4ade80; border-color:rgba(34,197,94,.25);  }
-.badge-running  { background:rgba(56,189,248,.1);  color:#38bdf8; border-color:rgba(56,189,248,.25); }
-.badge-failed   { background:rgba(239,68,68,.1);   color:#f87171; border-color:rgba(239,68,68,.25);  }
-.badge-pending  { background:rgba(100,116,139,.1); color:#94a3b8; border-color:rgba(100,116,139,.25);}
-.badge-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-.badge-running .badge-dot { background:#38bdf8; animation:pulse 1.5s infinite; }
-
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-.finding-row {
-  display:flex; align-items:center; gap:10px; padding:9px 16px;
-  border-bottom:1px solid #1c1e2e; transition:background .15s;
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
 }
-.finding-row:hover { background:rgba(28,30,46,.5); }
-.finding-row:last-child { border-bottom:none; }
+.panel-title {
+  font-size: 11px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .08em;
+}
 
-.section-head {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px; border-bottom:1px solid #1c1e2e;
+/* Detection chart */
+.detection-ring {
+  position: relative; width: 200px; height: 200px; margin: 0 auto;
 }
-.section-head-title {
-  font-size:10px; font-weight:700; color:#4b5563;
-  text-transform:uppercase; letter-spacing:.1em;
+.detection-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center;
 }
-.table-row td { border-bottom:1px solid rgba(28,30,46,.6); }
-.table-row:last-child td { border-bottom:none; }
-.table-row:hover td { background:rgba(28,30,46,.45); }
+
+/* Category label with colored dot */
+.cat-label {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; font-size: 12px; color: #c9d1d9;
+}
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Briefing item */
+.briefing-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+.briefing-item:hover { background: var(--bg-hover); }
+.briefing-item:last-child { border-bottom: none; }
+.briefing-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Triage item */
+.triage-item {
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  transition: background .15s; cursor: pointer;
+}
+.triage-item:hover { background: var(--bg-hover); }
+.triage-item:last-child { border-bottom: none; }
+
+/* Offender row */
+.offender-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 18px; border-bottom: 1px solid var(--border);
+  font-size: 12px; transition: background .15s;
+}
+.offender-row:hover { background: var(--bg-hover); }
+.offender-row:last-child { border-bottom: none; }
+
+/* Severity badges */
+.sev-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; border: 1px solid;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.sev-critical { background: rgba(239,68,68,.1); color: #f87171; border-color: rgba(239,68,68,.2); }
+.sev-high     { background: rgba(249,115,22,.1); color: #fb923c; border-color: rgba(249,115,22,.2); }
+.sev-medium   { background: rgba(234,179,8,.1);  color: #facc15; border-color: rgba(234,179,8,.2); }
+.sev-low      { background: rgba(34,197,94,.1);  color: #4ade80; border-color: rgba(34,197,94,.2); }
+.sev-info     { background: rgba(56,189,248,.1); color: #38bdf8; border-color: rgba(56,189,248,.2); }
+
+/* Status badges */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; border: 1px solid;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.status-done    { background: rgba(34,197,94,.08);  color: #4ade80; border-color: rgba(34,197,94,.2); }
+.status-running { background: rgba(56,189,248,.08); color: #38bdf8; border-color: rgba(56,189,248,.2); }
+.status-failed  { background: rgba(239,68,68,.08);  color: #f87171; border-color: rgba(239,68,68,.2); }
+.status-pending { background: rgba(139,148,158,.08); color: #8b949e; border-color: rgba(139,148,158,.2); }
+.status-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.status-running .status-dot { background: #38bdf8; animation: pulse-dot 1.5s infinite; }
+
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Severity bar segments */
+.sev-bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; gap: 1px; }
+.sev-seg { height: 100%; transition: flex .5s ease; min-width: 3px; border-radius: 99px; }
+
+/* Sub-navigation bar */
+.subnav {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; margin-bottom: 8px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.subnav-item {
+  padding: 5px 14px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; color: var(--text-3);
+  cursor: pointer; transition: all .15s;
+}
+.subnav-item:hover { color: var(--text-1); background: var(--bg-hover); }
+.subnav-item.active { color: var(--text-1); background: var(--bg-hover); }
+
+/* Table styles */
+.scan-table tr { border-bottom: 1px solid var(--border); }
+.scan-table tr:last-child { border-bottom: none; }
+.scan-table tr:hover td { background: var(--bg-hover); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-5">
+<div class="space-y-4">
 
-  <!-- ── PAGE HEADER ──────────────────────────────────────── -->
-  <div class="flex items-start justify-between gap-4">
+  <!-- ── PAGE HEADER ── -->
+  <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-sm font-semibold text-white">Dashboard</h1>
-      <p class="text-[11px] text-gray-600 mt-0.5">
-        Welcome back, <span class="font-mono text-gray-400">{{ request.user.username }}</span>
-        &nbsp;&middot;&nbsp;
-        <span class="font-mono text-gray-600" id="dash-time"></span>
-      </p>
+      <h1 class="text-sm font-semibold" style="color:var(--text-1)">Security Overview</h1>
+      <div class="flex items-center gap-1.5 mt-0.5" style="font-size:11px;color:var(--text-4)">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        <span id="dash-time"></span>
+      </div>
     </div>
     <div class="flex items-center gap-2">
       <a href="{% url 'scans:list' %}"
-         class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-400 hover:text-white border border-surface-border hover:border-gray-600 rounded-lg transition-colors">
+         class="flex items-center gap-1.5 px-3 text-[11px] font-medium rounded-lg transition-colors"
+         style="height:30px;color:var(--text-3);border:1px solid var(--border)"
+         onmouseover="this.style.color='var(--text-1)';this.style.borderColor='var(--border-muted)'"
+         onmouseout="this.style.color='var(--text-3)';this.style.borderColor='var(--border)'">
         <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 3"/>
         </svg>
         History
       </a>
       <a href="{% url 'modules:list' %}"
-         class="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent-hover rounded-lg transition-colors">
+         class="flex items-center gap-1.5 px-3.5 text-[11px] font-semibold text-white rounded-lg transition-colors"
+         style="height:30px;background:var(--accent);box-shadow:0 1px 4px rgba(14,165,233,.25)"
+         onmouseover="this.style.background='var(--accent-hover)'"
+         onmouseout="this.style.background='var(--accent)'">
         <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <path stroke-linecap="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -107,313 +173,668 @@
     </div>
   </div>
 
-  <!-- ── STAT CARDS ────────────────────────────────────────── -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+  <!-- ── METRIC CARDS ROW ──────────────────────────────────── -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
 
-    <div class="stat-card c-default">
+    <!-- Scans Today -->
+    <div class="metric-card">
+      <div class="metric-accent" style="background:linear-gradient(90deg,#0ea5e9,transparent)"></div>
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Today</span>
-        <div class="w-7 h-7 rounded-lg bg-surface-border/60 flex items-center justify-center">
-          <svg width="13" height="13" fill="none" stroke="#4b5563" stroke-width="2" viewBox="0 0 24 24">
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Today</span>
+        <div class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#0ea5e9" stroke-width="2" viewBox="0 0 24 24">
             <rect x="3" y="4" width="18" height="18" rx="2"/><path stroke-linecap="round" d="M16 2v4M8 2v4M3 10h18"/>
           </svg>
         </div>
       </div>
-      <p class="text-2xl font-mono font-bold text-white tabular-nums">{{ scans_today }}</p>
-      <p class="text-[10px] text-gray-700 mt-1">scans run</p>
+      <p class="text-3xl font-mono font-bold text-white tabular-nums">{{ scans_today }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">scans executed</p>
     </div>
 
-    <div class="stat-card c-default">
+    <!-- Total Scans -->
+    <div class="metric-card">
+      <div class="metric-accent" style="background:linear-gradient(90deg,#21262d,transparent)"></div>
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Total</span>
-        <div class="w-7 h-7 rounded-lg bg-surface-border/60 flex items-center justify-center">
-          <svg width="13" height="13" fill="none" stroke="#4b5563" stroke-width="2" viewBox="0 0 24 24">
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+        <div class="w-8 h-8 rounded-lg bg-surface-hover border border-surface-border flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#8b949e" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
         </div>
       </div>
-      <p class="text-2xl font-mono font-bold text-white tabular-nums">{{ scans_total }}</p>
-      <p class="text-[10px] text-gray-700 mt-1">all time</p>
+      <p class="text-3xl font-mono font-bold text-white tabular-nums">{{ scans_total }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">all time</p>
     </div>
 
-    <div class="stat-card c-critical stat-glow-critical">
+    <!-- Critical -->
+    <div class="metric-card" style="box-shadow:0 0 0 1px rgba(239,68,68,.12) inset">
+      <div class="metric-accent" style="background:linear-gradient(90deg,#ef4444,transparent)"></div>
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Critical</span>
-        <div class="w-7 h-7 rounded-lg bg-red-950/60 border border-red-900/30 flex items-center justify-center">
-          <svg width="12" height="12" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Critical</span>
+        <div class="w-8 h-8 rounded-lg bg-red-950/40 border border-red-900/25 flex items-center justify-center">
+          <svg width="13" height="13" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           </svg>
         </div>
       </div>
-      <p class="text-2xl font-mono font-bold text-critical tabular-nums">{{ critical }}</p>
-      <p class="text-[10px] text-gray-700 mt-1">findings</p>
+      <p class="text-3xl font-mono font-bold text-red-400 tabular-nums">{{ critical }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">findings</p>
     </div>
 
-    <div class="stat-card c-high stat-glow-high">
+    <!-- High -->
+    <div class="metric-card" style="box-shadow:0 0 0 1px rgba(249,115,22,.12) inset">
+      <div class="metric-accent" style="background:linear-gradient(90deg,#f97316,transparent)"></div>
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">High</span>
-        <div class="w-7 h-7 rounded-lg bg-orange-950/60 border border-orange-900/30 flex items-center justify-center">
-          <svg width="13" height="13" fill="none" stroke="#f97316" stroke-width="2" viewBox="0 0 24 24">
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">High</span>
+        <div class="w-8 h-8 rounded-lg bg-orange-950/40 border border-orange-900/25 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#f97316" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
           </svg>
         </div>
       </div>
-      <p class="text-2xl font-mono font-bold text-high tabular-nums">{{ high }}</p>
-      <p class="text-[10px] text-gray-700 mt-1">findings</p>
+      <p class="text-3xl font-mono font-bold text-orange-400 tabular-nums">{{ high }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">findings</p>
     </div>
 
-    <div class="stat-card {% if running %}c-info{% else %}c-default{% endif %}">
+    <!-- Medium -->
+    <div class="metric-card" style="box-shadow:0 0 0 1px rgba(234,179,8,.12) inset">
+      <div class="metric-accent" style="background:linear-gradient(90deg,#eab308,transparent)"></div>
       <div class="flex items-start justify-between mb-3">
-        <span class="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Running</span>
-        <div class="w-7 h-7 rounded-lg {% if running %}bg-sky-950/60 border border-sky-900/30{% else %}bg-surface-border/60{% endif %} flex items-center justify-center">
-          <svg width="13" height="13" fill="none" stroke="{% if running %}#38bdf8{% else %}#4b5563{% endif %}" stroke-width="2" viewBox="0 0 24 24"
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Medium</span>
+        <div class="w-8 h-8 rounded-lg bg-yellow-950/40 border border-yellow-900/25 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#eab308" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
+            <path stroke-linecap="round" d="M12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+        </div>
+      </div>
+      <p class="text-3xl font-mono font-bold text-yellow-400 tabular-nums">{{ medium }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">findings</p>
+    </div>
+
+    <!-- Running -->
+    <div class="metric-card">
+      <div class="metric-accent" style="background:linear-gradient(90deg,{% if running %}#38bdf8{% else %}#21262d{% endif %},transparent)"></div>
+      <div class="flex items-start justify-between mb-3">
+        <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Running</span>
+        <div class="w-8 h-8 rounded-lg {% if running %}bg-sky-950/40 border border-sky-900/25{% else %}bg-surface-hover border border-surface-border{% endif %} flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="{% if running %}#38bdf8{% else %}#8b949e{% endif %}" stroke-width="2" viewBox="0 0 24 24"
                {% if running %}class="spin-slow"{% endif %}>
             <path stroke-linecap="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
         </div>
       </div>
-      <p class="text-2xl font-mono font-bold {% if running %}text-info{% else %}text-gray-700{% endif %} tabular-nums">{{ running }}</p>
-      <p class="text-[10px] text-gray-700 mt-1">active scans</p>
+      <p class="text-3xl font-mono font-bold {% if running %}text-sky-400{% else %}text-gray-600{% endif %} tabular-nums">{{ running }}</p>
+      <p class="text-[10px] text-gray-600 mt-1">active scans</p>
     </div>
   </div>
 
   <!-- ── OPEN FINDINGS ALERT ─────────────────────────────── -->
   {% if open_findings %}
-  <div class="flex items-center gap-3 px-4 py-3 rounded-xl border
-              {% if open_critical %}bg-red-950/20 border-red-900/40{% else %}bg-surface-card border-surface-border{% endif %}">
-    <div class="flex items-center justify-center w-7 h-7 rounded-lg {% if open_critical %}bg-red-950/60{% else %}bg-surface-border{% endif %} flex-shrink-0">
-      <svg width="13" height="13" fill="none" stroke="{% if open_critical %}#ef4444{% else %}#64748b{% endif %}" stroke-width="2" viewBox="0 0 24 24">
+  <div class="flex items-center gap-3 px-5 py-3.5 rounded-xl border
+              {% if open_critical %}bg-red-950/15 border-red-900/30{% else %}bg-surface-card border-surface-border{% endif %}">
+    <div class="flex items-center justify-center w-8 h-8 rounded-lg {% if open_critical %}bg-red-950/40{% else %}bg-surface-hover{% endif %} flex-shrink-0">
+      <svg width="14" height="14" fill="none" stroke="{% if open_critical %}#ef4444{% else %}#8b949e{% endif %}" stroke-width="2" viewBox="0 0 24 24">
         <path stroke-linecap="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       </svg>
     </div>
     <div class="flex-1 min-w-0">
-      <span class="text-[11px] text-gray-400">
-        <span class="font-mono font-semibold {% if open_critical %}text-critical{% else %}text-white{% endif %}">{{ open_findings }}</span>
+      <span class="text-[12px] text-gray-400">
+        <span class="font-mono font-bold {% if open_critical %}text-red-400{% else %}text-white{% endif %}">{{ open_findings }}</span>
         open finding{{ open_findings|pluralize }}
         {% if open_critical %}
-        &mdash; including <span class="font-mono font-semibold text-critical">{{ open_critical }} critical</span>
+        — including <span class="font-mono font-bold text-red-400">{{ open_critical }} critical</span>
         {% endif %}
         requiring attention
       </span>
     </div>
-    <a href="{% url 'finding_list' %}?status=open" class="text-[11px] text-accent hover:text-accent-hover font-mono whitespace-nowrap transition-colors">
-      View all &rarr;
+    <a href="{% url 'finding_list' %}?status=open" class="text-[11px] text-accent hover:text-accent-hover font-medium whitespace-nowrap transition-colors">
+      View all →
     </a>
   </div>
   {% endif %}
 
-  <!-- ── MAIN GRID ─────────────────────────────────────────── -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <!-- ══════════════════════════════════════════════════════════
+       THREE-COLUMN SOC LAYOUT
+       ══════════════════════════════════════════════════════════ -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-    <!-- ── LEFT: Recent Scans (2/3 width) ─────────────────── -->
-    <div class="lg:col-span-2 bg-surface-card border border-surface-border rounded-xl overflow-hidden">
-      <div class="section-head">
-        <span class="section-head-title">Recent Scans</span>
-        <a href="{% url 'scans:list' %}" class="text-[11px] text-accent hover:text-accent-hover transition-colors font-mono">View all &rarr;</a>
-      </div>
+    <!-- ── LEFT COLUMN (4/12): Severity Doughnut + Finding Status ── -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
 
-      {% if recent_jobs %}
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr style="background:#0d0f18;border-bottom:1px solid #1c1e2e">
-              <th class="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Module</th>
-              <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">Target</th>
-              <th class="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-              <th class="px-3 py-2.5 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Findings</th>
-              <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for job in recent_jobs %}
-            <tr class="table-row">
-              <td class="px-4 py-3">
-                <a href="{% url 'scans:detail' job.id %}"
-                   class="font-mono text-xs text-accent hover:text-accent-hover transition-colors">{{ job.module_id }}</a>
-                {% if job.project %}
-                <p class="text-[10px] text-gray-700 mt-0.5 font-mono truncate max-w-[160px]">{{ job.project.name }}</p>
-                {% endif %}
-              </td>
-              <td class="px-3 py-3 hidden sm:table-cell">
-                <span class="font-mono text-[11px] text-gray-500 truncate block max-w-[140px]">
-                  {% if job.target %}{{ job.target.value|truncatechars:24 }}{% else %}<span class="text-gray-700">&mdash;</span>{% endif %}
-                </span>
-              </td>
-              <td class="px-3 py-3">
-                <span class="badge
-                  {% if job.status == 'done' %}badge-done
-                  {% elif job.status == 'running' %}badge-running
-                  {% elif job.status == 'failed' %}badge-failed
-                  {% else %}badge-pending{% endif %}">
-                  {% if job.status == 'running' %}<span class="badge-dot"></span>{% endif %}
-                  {{ job.status }}
-                </span>
-              </td>
-              <td class="px-3 py-3 text-center">
-                <div class="flex items-center justify-center gap-1.5 font-mono text-[11px]">
-                  {% if job.critical_count %}<span class="text-critical font-semibold">{{ job.critical_count }}C</span>{% endif %}
-                  {% if job.high_count %}<span class="text-high font-semibold">{{ job.high_count }}H</span>{% endif %}
-                  {% if not job.critical_count and not job.high_count %}
-                    <span class="text-gray-600">{{ job.finding_count|default:0 }}</span>
-                  {% endif %}
-                </div>
-              </td>
-              <td class="px-3 py-3 text-right font-mono text-[11px] text-gray-600 hidden md:table-cell whitespace-nowrap">
-                {{ job.created_at|date:"M d, H:i" }}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="py-16 flex flex-col items-center text-center">
-        <div class="w-12 h-12 rounded-xl bg-surface-border/60 flex items-center justify-center mb-4">
-          <svg width="20" height="20" fill="none" stroke="#2d3448" stroke-width="1.5" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 3"/>
-          </svg>
+      <!-- Severity Distribution — Doughnut Chart -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Severity Distribution</span>
+          <a href="{% url 'finding_list' %}" class="text-[11px] text-accent hover:text-accent-hover font-medium transition-colors">All findings →</a>
         </div>
-        <p class="text-sm text-gray-600 font-medium">No scans yet</p>
-        <p class="text-xs text-gray-700 mt-1">Run your first attack module to see activity here</p>
-        <a href="{% url 'modules:list' %}" class="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-xs font-semibold rounded-lg transition-colors">
-          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
-          Browse modules
-        </a>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- ── RIGHT COLUMN ───────────────────────────────────── -->
-    <div class="flex flex-col gap-4">
-
-      <!-- Severity Snapshot -->
-      <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
-        <div class="section-head">
-          <span class="section-head-title">Severity Breakdown</span>
-        </div>
-        <div class="p-4 space-y-3">
-          {% with total=critical|add:high %}
-          {% if critical or high %}
-          <div class="sev-bar-wrap">
-            {% if critical %}<div class="sev-seg" style="background:#ef4444;flex:{{ critical }}"></div>{% endif %}
-            {% if high    %}<div class="sev-seg" style="background:#f97316;flex:{{ high }}"></div>{% endif %}
+        <div class="p-5">
+          {% with total=critical|add:high|add:medium|add:low|add:info %}
+          {% if total %}
+          <!-- Radar chart fills the full panel width -->
+          <div class="relative" style="height:270px">
+            <canvas id="chartSeverity"></canvas>
           </div>
-          {% for label,count,color in severity_rows|default:"" %}{% endfor %}
-          <div class="space-y-2 mt-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-sm bg-critical flex-shrink-0"></span>
-              <span class="text-xs text-gray-500 flex-1">Critical</span>
-              <span class="font-mono text-xs text-critical font-semibold">{{ critical }}</span>
+          <!-- Compact legend under chart -->
+          <div class="grid grid-cols-5 gap-1 mt-4">
+            <div class="flex flex-col items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-sm bg-red-500"></span>
+              <span class="font-mono text-[12px] text-red-400 font-bold">{{ critical }}</span>
+              <span class="text-[9px] text-gray-500 uppercase tracking-wider">Crit</span>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-sm bg-high flex-shrink-0"></span>
-              <span class="text-xs text-gray-500 flex-1">High</span>
-              <span class="font-mono text-xs text-high font-semibold">{{ high }}</span>
+            <div class="flex flex-col items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-sm bg-orange-500"></span>
+              <span class="font-mono text-[12px] text-orange-400 font-bold">{{ high }}</span>
+              <span class="text-[9px] text-gray-500 uppercase tracking-wider">High</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></span>
+              <span class="font-mono text-[12px] text-yellow-400 font-bold">{{ medium }}</span>
+              <span class="text-[9px] text-gray-500 uppercase tracking-wider">Med</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-sm bg-green-500"></span>
+              <span class="font-mono text-[12px] text-green-400 font-bold">{{ low }}</span>
+              <span class="text-[9px] text-gray-500 uppercase tracking-wider">Low</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="w-2.5 h-2.5 rounded-sm bg-sky-500"></span>
+              <span class="font-mono text-[12px] text-sky-400 font-bold">{{ info }}</span>
+              <span class="text-[9px] text-gray-500 uppercase tracking-wider">Info</span>
             </div>
           </div>
           {% else %}
-          <div class="py-6 flex flex-col items-center">
-            <div class="w-8 h-8 rounded-lg bg-ok/10 border border-ok/20 flex items-center justify-center mb-2">
-              <svg width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24">
+          <div class="py-8 flex flex-col items-center">
+            <div class="w-10 h-10 rounded-lg bg-green-950/30 border border-green-900/20 flex items-center justify-center mb-3">
+              <svg width="16" height="16" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </div>
-            <p class="text-xs text-gray-600">No critical or high findings</p>
+            <p class="text-[12px] text-gray-500 font-medium">No findings detected</p>
+            <p class="text-[10px] text-gray-600 mt-1">System secure</p>
           </div>
           {% endif %}
           {% endwith %}
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
-        <div class="section-head">
-          <span class="section-head-title">Quick Actions</span>
+      <!-- Finding Status — Horizontal Bar Chart -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Finding Status</span>
         </div>
-        <div class="p-3 space-y-2">
-          <a href="{% url 'modules:list' %}?category=recon" class="qa-card group">
-            <div class="qa-icon bg-violet-950/60 border border-violet-900/35">
-              <svg width="15" height="15" fill="none" stroke="#7c3aed" stroke-width="2" viewBox="0 0 24 24">
+        <div class="p-4" style="height:210px">
+          <canvas id="chartFindingStatus"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CENTER COLUMN (4/12): Trend + Scan Status ── -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- Scan Activity Trend — Area Chart (14 days) -->
+      <div class="panel flex-1">
+        <div class="panel-head">
+          <span class="panel-title">Activity Trend (14d)</span>
+          <div class="flex items-center gap-3 text-[10px]">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#0ea5e9"></span><span class="text-gray-500">Scans</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f97316"></span><span class="text-gray-500">Findings</span></span>
+          </div>
+        </div>
+        <div class="p-4" style="height:260px">
+          <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
+
+      <!-- Scan Status — Doughnut Chart -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Scan Status Breakdown</span>
+          <span class="text-xl font-mono font-bold text-white">{{ scans_total }}</span>
+        </div>
+        <div class="p-4 flex items-center gap-5">
+          <div style="width:140px;height:140px;flex-shrink:0" class="relative">
+            <canvas id="chartScanStatus" width="140" height="140"></canvas>
+          </div>
+          <div class="space-y-2 flex-1 min-w-0" id="scanStatusLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT COLUMN (4/12): Recent Activity ── -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+
+      <!-- Quick Actions -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Quick Actions</span>
+        </div>
+        <div class="p-2.5 grid grid-cols-2 gap-1.5">
+          <a href="{% url 'modules:list' %}?category=recon" class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-hover transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" fill="none" stroke="#0ea5e9" stroke-width="2" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">Reconnaissance</p>
-              <p class="text-[10px] text-gray-700">Subdomain &middot; Port &middot; DNS</p>
+              <p class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition-colors truncate">Recon</p>
+              <p class="text-[9px] text-gray-600 truncate">Subdomains / Ports</p>
             </div>
-            <svg class="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-500 ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
           </a>
-
-          <a href="{% url 'modules:list' %}?category=xss" class="qa-card group">
-            <div class="qa-icon bg-orange-950/60 border border-orange-900/35">
-              <svg width="15" height="15" fill="none" stroke="#f97316" stroke-width="2" viewBox="0 0 24 24">
+          <a href="{% url 'modules:list' %}?category=xss" class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-hover transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" fill="none" stroke="#f97316" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">XSS Scanning</p>
-              <p class="text-[10px] text-gray-700">Reflected &middot; DOM &middot; Blind</p>
+              <p class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition-colors truncate">XSS</p>
+              <p class="text-[9px] text-gray-600 truncate">Reflected / DOM</p>
             </div>
-            <svg class="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-500 ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
           </a>
-
-          <a href="{% url 'modules:list' %}?category=sqli" class="qa-card group">
-            <div class="qa-icon bg-red-950/60 border border-red-900/35">
-              <svg width="15" height="15" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" d="M4 7v10c0 2 1.5 3 3.5 3s3.5-1 3.5-3V7c0-2-1.5-3-3.5-3S4 5 4 7zm13 5h3M4 12h7m0 0c0 2 1.5 3 3.5 3s3.5-1 3.5-3"/>
+          <a href="{% url 'modules:list' %}?category=sqli" class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-hover transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
+                <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/>
+                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">SQL Injection</p>
-              <p class="text-[10px] text-gray-700">Error-based &middot; Blind &middot; UNION</p>
+              <p class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition-colors truncate">SQLi</p>
+              <p class="text-[9px] text-gray-600 truncate">Error / Blind</p>
             </div>
-            <svg class="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-500 ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
           </a>
-
-          <a href="{% url 'targets:project_create' %}" class="qa-card group">
-            <div class="qa-icon bg-green-950/60 border border-green-900/35">
-              <svg width="15" height="15" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" d="M3 7a2 2 0 012-2h3.4a2 2 0 011.2.4l1.8 1.2A2 2 0 0012.6 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+          <a href="{% url 'targets:project_create' %}" class="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-hover transition-colors group">
+            <div class="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" d="M12 4v16m8-8H4"/>
               </svg>
             </div>
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">New Project</p>
-              <p class="text-[10px] text-gray-700">Create engagement scope</p>
+              <p class="text-[11px] font-semibold text-gray-300 group-hover:text-white transition-colors truncate">New Project</p>
+              <p class="text-[9px] text-gray-600 truncate">Start engagement</p>
             </div>
-            <svg class="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-500 ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
-          </a>
-
-          <a href="{% url 'finding_list' %}?status=open&severity=critical" class="qa-card group">
-            <div class="qa-icon bg-red-950/60 border border-red-900/35">
-              <svg width="15" height="15" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              </svg>
-            </div>
-            <div class="min-w-0">
-              <p class="text-xs font-semibold text-gray-300 group-hover:text-white transition-colors">Critical Findings</p>
-              <p class="text-[10px] text-gray-700">Review open criticals</p>
-            </div>
-            <svg class="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-500 ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
           </a>
         </div>
       </div>
 
-    </div><!-- /right col -->
-  </div><!-- /main grid -->
+      <!-- Recent Scans / Frequent Offenders -->
+      <div class="panel flex-1">
+        <div class="panel-head">
+          <span class="panel-title">Recent Scans</span>
+          <a href="{% url 'scans:list' %}" class="text-[11px] text-accent hover:text-accent-hover font-medium transition-colors">
+            View all →
+          </a>
+        </div>
 
+        {% if recent_jobs %}
+        <div class="overflow-y-auto" style="max-height: 520px;">
+          {% for job in recent_jobs %}
+          <a href="{% url 'scans:detail' job.id %}" class="offender-row group">
+            <!-- Status indicator -->
+            <div class="w-2 h-2 rounded-full flex-shrink-0
+                 {% if job.status == 'done' %}bg-green-500
+                 {% elif job.status == 'running' %}bg-sky-400
+                 {% elif job.status == 'failed' %}bg-red-500
+                 {% else %}bg-gray-600{% endif %}"></div>
+
+            <!-- Module + target info -->
+            <div class="flex-1 min-w-0">
+              <p class="font-mono text-[11px] text-gray-300 group-hover:text-white transition-colors truncate">{{ job.module_id }}</p>
+              <p class="text-[10px] text-gray-600 truncate mt-0.5">
+                {% if job.target %}{{ job.target.value|truncatechars:28 }}{% elif job.project %}{{ job.project.name|truncatechars:28 }}{% else %}—{% endif %}
+              </p>
+            </div>
+
+            <!-- Findings badge -->
+            <div class="flex items-center gap-1 font-mono text-[10px] flex-shrink-0">
+              {% if job.critical_count %}<span class="text-red-400 font-semibold">{{ job.critical_count }}C</span>{% endif %}
+              {% if job.high_count %}<span class="text-orange-400 font-semibold">{{ job.high_count }}H</span>{% endif %}
+              {% if job.medium_count %}<span class="text-yellow-400 font-semibold">{{ job.medium_count }}M</span>{% endif %}
+              {% if not job.critical_count and not job.high_count and not job.medium_count %}
+                <span class="text-gray-600">{{ job.finding_count|default:0 }}</span>
+              {% endif %}
+            </div>
+
+            <!-- Status -->
+            <span class="status-badge flex-shrink-0
+              {% if job.status == 'done' %}status-done
+              {% elif job.status == 'running' %}status-running
+              {% elif job.status == 'failed' %}status-failed
+              {% else %}status-pending{% endif %}">
+              {% if job.status == 'running' %}<span class="status-dot"></span>{% endif %}
+              {{ job.status }}
+            </span>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-16 flex flex-col items-center text-center px-6">
+          <div class="w-12 h-12 rounded-xl bg-surface-hover flex items-center justify-center mb-4">
+            <svg width="20" height="20" fill="none" stroke="#484f58" stroke-width="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 3"/>
+            </svg>
+          </div>
+          <p class="text-[13px] text-gray-500 font-medium">No scans yet</p>
+          <p class="text-[11px] text-gray-600 mt-1">Run your first attack module to see activity here</p>
+          <a href="{% url 'modules:list' %}" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-[11px] font-semibold rounded-lg transition-colors shadow-sm shadow-accent/20">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
+            Browse modules
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /three-column grid -->
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function(){
-  // Clock
+  /* ─── CSS var helper (theme-aware) ─── */
+  const cssVar = function(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+
+  /* ─── Clock ─── */
   function tick(){
     const el=document.getElementById("dash-time"); if(!el) return;
     const n=new Date();
-    el.textContent=n.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    el.textContent=n.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})
+      + " \u2014 " + n.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})
+      + " UTC";
   }
   tick(); setInterval(tick,1000);
+
+  /* ─── Chart.js global defaults ─── */
+  Chart.defaults.color = cssVar('--text-3');
+  Chart.defaults.borderColor = cssVar('--border');
+  Chart.defaults.font.family = "'Inter','JetBrains Mono',monospace";
+  Chart.defaults.font.size = 10;
+  Chart.defaults.plugins.legend.display = false;
+  Chart.defaults.animation.duration = 700;
+
+  window.__charts = window.__charts || [];
+
+  /* ─ shared tooltip defaults ─ */
+  function tooltipDefaults(){
+    return {
+      backgroundColor: cssVar('--bg-card'),
+      borderColor: cssVar('--border'),
+      borderWidth: 1,
+      titleColor: cssVar('--text-1'),
+      bodyColor: cssVar('--text-2'),
+      padding: 10,
+      cornerRadius: 8,
+      boxPadding: 4
+    };
+  }
+
+  const SEV_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#38bdf8'];
+  const SEV_VALUES = [{{ critical }}, {{ high }}, {{ medium }}, {{ low }}, {{ info }}];
+
+  /* ─── 1. Severity Radar Chart ─── */
+  const sevEl = document.getElementById('chartSeverity');
+  if (sevEl) {
+    const gridColor = cssVar('--border');
+    const tickColor = cssVar('--text-4');
+    const cardBg    = cssVar('--bg-card');
+
+    // Sqrt-normalize to 0-100 so no single axis collapses when one value dominates.
+    // Raw counts are shown in the tooltip.
+    const sevMax = Math.max.apply(null, SEV_VALUES.concat([1]));
+    const sevNorm = SEV_VALUES.map(function(v){
+      return Math.round((Math.sqrt(v) / Math.sqrt(sevMax)) * 100);
+    });
+
+    const sevChart = new Chart(sevEl.getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels: ['Critical','High','Medium','Low','Info'],
+        datasets: [{
+          label: 'Findings',
+          data: sevNorm,
+          backgroundColor: 'rgba(14,165,233,.18)',
+          borderColor: '#0ea5e9',
+          borderWidth: 2.5,
+          pointBackgroundColor: SEV_COLORS,
+          pointBorderColor: cardBg,
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointStyle: 'circle',
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 8, bottom: 4, left: 8, right: 8 } },
+        scales: {
+          r: {
+            beginAtZero: true,
+            min: 0,
+            max: 100,
+            ticks: {
+              display: true,
+              count: 5,
+              font: { size: 8 },
+              color: tickColor,
+              backdropColor: 'transparent',
+              backdropPadding: 2,
+              callback: function(v){ return v === 0 ? '' : v + '%'; }
+            },
+            grid: {
+              color: gridColor,
+              circular: false
+            },
+            angleLines: {
+              color: gridColor,
+              lineWidth: 1
+            },
+            pointLabels: {
+              font: { size: 11, weight: '700' },
+              color: SEV_COLORS,
+              padding: 10
+            }
+          }
+        },
+        plugins: {
+          tooltip: Object.assign(tooltipDefaults(), {
+            displayColors: true,
+            callbacks: {
+              label: function(ctx) {
+                const raw = SEV_VALUES[ctx.dataIndex];
+                const tot = SEV_VALUES.reduce(function(a,b){return a+b;},0);
+                const pct = tot ? ((raw/tot)*100).toFixed(1) : '0.0';
+                return ' ' + ctx.label + ': ' + raw + ' findings (' + pct + '%)';
+              }
+            }
+          })
+        }
+      }
+    });
+    window.__charts.push(sevChart);
+  }
+
+  /* ─── 2. Activity Trend Area Chart ─── */
+  const trendEl = document.getElementById('chartTrend');
+  if (trendEl) {
+    const trendLabels = {{ trend_labels|safe }};
+    const trendScans = {{ trend_scans|safe }};
+    const trendFindings = {{ trend_findings|safe }};
+    const ctx = trendEl.getContext('2d');
+
+    const gradScans = ctx.createLinearGradient(0,0,0,260);
+    gradScans.addColorStop(0, 'rgba(14,165,233,.25)');
+    gradScans.addColorStop(1, 'rgba(14,165,233,0)');
+
+    const gradFindings = ctx.createLinearGradient(0,0,0,260);
+    gradFindings.addColorStop(0, 'rgba(249,115,22,.2)');
+    gradFindings.addColorStop(1, 'rgba(249,115,22,0)');
+
+    const trendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: trendLabels,
+        datasets: [
+          {
+            label: 'Scans',
+            data: trendScans,
+            borderColor: '#0ea5e9',
+            backgroundColor: gradScans,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#0ea5e9',
+            pointHoverBorderColor: cssVar('--bg'),
+            pointHoverBorderWidth: 2
+          },
+          {
+            label: 'Findings',
+            data: trendFindings,
+            borderColor: '#f97316',
+            backgroundColor: gradFindings,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#f97316',
+            pointHoverBorderColor: cssVar('--bg'),
+            pointHoverBorderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 0, autoSkipPadding: 16 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: cssVar('--border') },
+            ticks: { precision: 0 }
+          }
+        },
+        plugins: { tooltip: tooltipDefaults() }
+      }
+    });
+    window.__charts.push(trendChart);
+  }
+
+  /* ─── 3. Scan Status Doughnut ─── */
+  const ssEl = document.getElementById('chartScanStatus');
+  if (ssEl) {
+    const scanStatusRaw = {{ scan_status|safe }};
+    const ssMap = {
+      done:      { color: '#22c55e', label: 'Done' },
+      running:   { color: '#38bdf8', label: 'Running' },
+      pending:   { color: '#eab308', label: 'Pending' },
+      failed:    { color: '#ef4444', label: 'Failed' },
+      cancelled: { color: '#6b7280', label: 'Cancelled' },
+      paused:    { color: '#a78bfa', label: 'Paused' }
+    };
+    const ssLabels = [], ssData = [], ssColors = [];
+    for (const k in ssMap) {
+      if (scanStatusRaw[k]) {
+        ssLabels.push(ssMap[k].label);
+        ssData.push(scanStatusRaw[k]);
+        ssColors.push(ssMap[k].color);
+      }
+    }
+    if (ssData.length === 0) { ssLabels.push('None'); ssData.push(1); ssColors.push(cssVar('--border')); }
+
+    const ssChart = new Chart(ssEl.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ssLabels,
+        datasets: [{ data: ssData, backgroundColor: ssColors, borderColor: cssVar('--bg-card'), borderWidth: 2 }]
+      },
+      options: {
+        cutout: '68%',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { tooltip: tooltipDefaults() }
+      }
+    });
+    window.__charts.push(ssChart);
+
+    // Render legend
+    const legendEl = document.getElementById('scanStatusLegend');
+    if (legendEl) {
+      ssLabels.forEach(function(label, i) {
+        legendEl.innerHTML += '<div class="flex items-center gap-2">' +
+          '<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:' + ssColors[i] + '"></span>' +
+          '<span class="text-[11px] flex-1" style="color:var(--text-3)">' + label + '</span>' +
+          '<span class="font-mono text-[11px] font-semibold" style="color:var(--text-2)">' + ssData[i] + '</span></div>';
+      });
+    }
+  }
+
+  /* ─── 4. Finding Status Horizontal Bar ─── */
+  const fsEl = document.getElementById('chartFindingStatus');
+  if (fsEl) {
+    const fsRaw = {{ finding_status|safe }};
+    const fsMap = {
+      open:      { color: '#f97316', label: 'Open' },
+      confirmed: { color: '#ef4444', label: 'Confirmed' },
+      mitigated: { color: '#eab308', label: 'Mitigated' },
+      fixed:     { color: '#22c55e', label: 'Fixed' },
+      closed:    { color: '#8b949e', label: 'Closed' },
+      fp:        { color: '#6366f1', label: 'False Positive' },
+      wontfix:   { color: '#6b7280', label: "Won't Fix" }
+    };
+    const fsLabels = [], fsData = [], fsColors = [];
+    for (const k in fsMap) {
+      if (fsRaw[k]) {
+        fsLabels.push(fsMap[k].label);
+        fsData.push(fsRaw[k]);
+        fsColors.push(fsMap[k].color);
+      }
+    }
+    if (fsData.length === 0) { fsLabels.push('None'); fsData.push(0); fsColors.push(cssVar('--border')); }
+
+    const fsChart = new Chart(fsEl.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: fsLabels,
+        datasets: [{
+          data: fsData,
+          backgroundColor: fsColors.map(function(c){ return c + 'cc'; }),
+          borderColor: fsColors,
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: cssVar('--border') },
+            ticks: { precision: 0 }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { font: { size: 10 } }
+          }
+        },
+        plugins: { tooltip: Object.assign(tooltipDefaults(), { padding: 8 }) }
+      }
+    });
+    window.__charts.push(fsChart);
+  }
 })();
 </script>
 <style>
