@@ -56,8 +56,14 @@ class ZAPClient:
         self.api_key = (
             api_key
             or getattr(settings, "ZAP_API_KEY", None)
-            or ""
+            or "changeme"  # last resort — must match ZAP container default
         )
+        if not self.api_key:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "ZAPClient: ZAP_API_KEY is not set — API calls will fail 403. "
+                "Set ZAP_API_KEY in .env and ensure it matches the ZAP daemon."
+            )
 
     # ── Low-level HTTP ────────────────────────────────────────────────────────
 
@@ -467,21 +473,67 @@ class ZAPClient:
 
     # ── Polling helpers ───────────────────────────────────────────────────────
 
+    def passive_scan_scanners(self) -> list[dict]:
+        """Return list of enabled passive scan rules with their names and IDs."""
+        resp = self._get("/JSON/pscan/view/scanners/")
+        return resp.get("scanners", [])
+
+    def active_scan_messages_sent(self, scan_id: str) -> int:
+        """Return total number of HTTP requests sent by the active scanner so far."""
+        try:
+            resp = self._get("/JSON/ascan/view/numberOfRecordsToScan/")
+            # ZAP returns records still pending; approximation only
+            return int(resp.get("numberOfRecordsToScan", 0))
+        except Exception:
+            return 0
+
+    def active_scan_scanners(self) -> list[dict]:
+        """Return list of active scan rules (plugins) with their IDs and names."""
+        resp = self._get("/JSON/ascan/view/scanners/")
+        return resp.get("scanners", [])
+
+    @staticmethod
+    def _is_passive_alert(alert: dict) -> bool:
+        """
+        Classify an alert as passive (observed from response analysis) or active
+        (injected attack payload).
+
+        ZAP passive rule plugin IDs are generally < 40000;
+        active rule IDs are >= 40000. However, a few rules have low IDs but are
+        triggered by the active scanner — these are listed explicitly.
+        """
+        # Rules with IDs < 40000 that are actually fired by the active scanner
+        _ACTIVE_DESPITE_LOW_ID = {
+            10104,  # User Agent Fuzzer
+        }
+        try:
+            pid = int(alert.get("pluginId", 0))
+            if pid in _ACTIVE_DESPITE_LOW_ID:
+                return False
+            return pid < 40000
+        except (TypeError, ValueError):
+            return True
+
+    # ── Polling helpers ───────────────────────────────────────────────────────
+
     def wait_spider(
         self,
         scan_id: str,
         timeout: int = 600,
         stream=None,
     ) -> None:
-        """Block until spider reaches 100% or timeout."""
+        """Block until spider reaches 100% or timeout. Logs only on progress change."""
         start = time.time()
+        last_pct = -1
         while time.time() - start < timeout:
             pct = self.spider_status(scan_id)
-            if stream:
-                stream("info", f"[ZAP] Spider progress: {pct}%")
+            if pct != last_pct:
+                if stream:
+                    stream("info", f"[ZAP] Spider progress: {pct}%")
+                last_pct = pct
             if pct >= 100:
                 break
-            time.sleep(8)
+            time.sleep(5)
 
     def wait_active_scan(
         self,
@@ -489,12 +541,20 @@ class ZAPClient:
         timeout: int = 3600,
         stream=None,
     ) -> None:
-        """Block until active scan reaches 100% or timeout."""
+        """Block until active scan reaches 100% or timeout. Logs on change + every 60s."""
         start = time.time()
+        last_pct = -1
+        last_log_time = start
         while time.time() - start < timeout:
             pct = self.active_scan_status(scan_id)
-            if stream:
-                stream("info", f"[ZAP] Active scan progress: {pct}%")
+            now = time.time()
+            # Log if percentage changed or 60 seconds have passed (heartbeat)
+            if pct != last_pct or (now - last_log_time) >= 60:
+                elapsed = int(now - start)
+                if stream:
+                    stream("info", f"[ZAP] Active scan progress: {pct}% ({elapsed}s elapsed)")
+                last_pct = pct
+                last_log_time = now
             if pct >= 100:
                 break
             time.sleep(15)

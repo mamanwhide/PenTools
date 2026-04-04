@@ -17,9 +17,9 @@ from .models import Finding, FindingStatusHistory
 # ─── helper ──────────────────────────────────────────────────────────────────
 
 def _owned_finding(user, pk):
-    """Get finding the user has access to (owns project or is superuser)."""
+    """Get finding the user has access to (owns project or is admin role)."""
     f = get_object_or_404(Finding, pk=pk)
-    if user.is_superuser:
+    if user.is_admin_role:  # HIGH-08: use custom role instead of Django is_superuser
         return f
     if f.project and (f.project.owner == user or f.project.members.filter(pk=user.pk).exists()):
         return f
@@ -50,6 +50,7 @@ def finding_list(request):
     project_id = request.GET.get("project")
     q = request.GET.get("q", "").strip()
     is_manual = request.GET.get("manual")
+    job_id = request.GET.get("job")  # NEW-01: filter by scan job when linked from scan detail
 
     if severity:
         qs = qs.filter(severity=severity)
@@ -61,6 +62,8 @@ def finding_list(request):
         qs = qs.filter(Q(title__icontains=q) | Q(url__icontains=q) | Q(cve_id__icontains=q))
     if is_manual == "1":
         qs = qs.filter(is_manual=True)
+    if job_id:
+        qs = qs.filter(scan_job_id=job_id)
 
     # Stats
     stats = {
@@ -85,6 +88,7 @@ def finding_list(request):
         "filters": {
             "severity": severity, "status": status,
             "project": project_id, "q": q, "manual": is_manual,
+            "job": job_id,  # NEW-01: preserve scan job filter across pagination
         },
     })
 
@@ -116,8 +120,10 @@ def finding_create(request):
         project_id = data.get("project")
         project = None
         if project_id:
-            project = get_object_or_404(Project, pk=project_id,
-                                        owner=request.user)
+            project = get_object_or_404(
+                Project.objects.filter(Q(owner=request.user) | Q(members=request.user)),
+                pk=project_id,  # NEW-02: project members can also create manual findings
+            )
 
         cvss_score = None
         raw_cvss = data.get("cvss_score", "").strip()

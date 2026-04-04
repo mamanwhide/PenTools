@@ -43,7 +43,9 @@ services:
   # ─── Redis ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # MED-03: volatile-lru only evicts keys with TTL (Django cache keys).
+    # Celery task messages have no TTL so they are never evicted under memory pressure.
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy volatile-lru
     volumes:
       - redis_data:/data
     healthcheck:
@@ -87,6 +89,14 @@ services:
     command: /scripts/celery-entrypoint.sh
     environment:
       CELERY_WORKER_TYPE: worker
+    # MED-04: Celery modules call ZAP API; wait for ZAP to be healthy before worker starts.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      zap:
+        condition: service_healthy
 
   # ─── Celery Beat (Scheduler) ────────────────────────────────
   celery_beat:

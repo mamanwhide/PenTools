@@ -14,7 +14,7 @@ from .models import NotificationChannel, NotificationLog
 
 def _owned_channel(user, pk):
     ch = get_object_or_404(NotificationChannel, pk=pk)
-    if ch.owner == user or user.is_superuser:
+    if ch.owner == user or user.is_admin_role:  # HIGH-08: use custom role
         return ch
     from django.core.exceptions import PermissionDenied
     raise PermissionDenied

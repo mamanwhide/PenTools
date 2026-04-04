@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from django.db import models
 from django.conf import settings
+from pentools.encrypted_fields import EncryptedCharField
 
 
 class NotificationChannel(models.Model):
@@ -42,18 +43,18 @@ class NotificationChannel(models.Model):
     is_active = models.BooleanField(default=True)
 
     # Telegram
-    telegram_bot_token = models.CharField(max_length=200, blank=True)
+    telegram_bot_token = EncryptedCharField(blank=True, default="")  # encrypted at rest
     telegram_chat_id = models.CharField(max_length=100, blank=True)
 
     # Slack
-    slack_webhook_url = models.URLField(max_length=500, blank=True)
+    slack_webhook_url = EncryptedCharField(blank=True, default="")  # encrypted at rest
 
     # Email SMTP
     smtp_host = models.CharField(max_length=200, blank=True)
     smtp_port = models.PositiveSmallIntegerField(default=587)
     smtp_use_tls = models.BooleanField(default=True)
     smtp_username = models.CharField(max_length=200, blank=True)
-    smtp_password = models.CharField(max_length=500, blank=True)  # stored encrypted at app layer
+    smtp_password = EncryptedCharField(blank=True, default="")  # encrypted at rest
     email_from = models.EmailField(blank=True)
     email_to = models.TextField(
         blank=True,
@@ -99,3 +100,24 @@ class NotificationLog(models.Model):
 
     def __str__(self):
         return f"{self.channel} — {self.event} — {self.result}"
+
+
+class TelegramBotSession(models.Model):
+    """
+    Links a Telegram chat_id to a PenTools user account.
+    Created via the bot command: /auth <api_key>
+    """
+    chat_id = models.CharField(max_length=100, unique=True, db_index=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="telegram_bot_session",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notifications_telegrambotsession"
+
+    def __str__(self):
+        return f"chat:{self.chat_id} → {self.user}"

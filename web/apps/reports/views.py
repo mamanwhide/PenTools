@@ -17,7 +17,7 @@ from .models import Report
 
 def _user_report(user, report_id):
     report = get_object_or_404(Report, pk=report_id)
-    if user.is_superuser:
+    if user.is_admin_role:  # HIGH-08: use custom role instead of Django is_superuser
         return report
     if report.project.owner == user or report.project.members.filter(pk=user.pk).exists():
         return report
@@ -269,7 +269,17 @@ def report_download(request, pk):
     }
     ct = ct_map.get(ext, "application/octet-stream")
     safe_title = "".join(c if c.isalnum() else "_" for c in report.title)[:40]
-    resp = FileResponse(open(file_path, "rb"), content_type=ct)
+
+    # HIGH-07: use X-Accel-Redirect so nginx serves the file bytes but only
+    # after this view has already validated ownership via _user_report().
+    import os
+    from django.conf import settings
+    media_root = str(settings.MEDIA_ROOT).rstrip("/")
+    abs_path = str(file_path)
+    # Build the internal URI nginx expects (/media/reports/<pk>/report.<ext>)
+    accel_uri = "/" + abs_path[len(media_root):].lstrip("/")
+    resp = HttpResponse(content_type=ct)
+    resp["X-Accel-Redirect"] = accel_uri
     resp["Content-Disposition"] = f'attachment; filename="{safe_title}.{ext}"'
     return resp
 

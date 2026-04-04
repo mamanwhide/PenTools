@@ -3,8 +3,7 @@ Notification dispatcher — sends alerts via Telegram, Slack, and Email.
 Called from Celery tasks (async).
 """
 from __future__ import annotations
-import logging
-
+import logging  # LOW-01: moved from end of file to module top
 logger = logging.getLogger(__name__)
 
 
@@ -162,9 +161,11 @@ def _send_email(channel, event: str, obj):
     msg.attach(MIMEText(body_text, "plain"))
     msg.attach(MIMEText(body_html, "html"))
 
+    import ssl
+    tls_ctx = ssl.create_default_context()  # HIGH-05: verify server certificate
     with smtplib.SMTP(channel.smtp_host, channel.smtp_port, timeout=30) as smtp:
         if channel.smtp_use_tls:
-            smtp.starttls()
+            smtp.starttls(context=tls_ctx)
         if channel.smtp_username and channel.smtp_password:
             smtp.login(channel.smtp_username, channel.smtp_password)
         smtp.sendmail(msg["From"], recipients, msg.as_string())
@@ -256,5 +257,4 @@ def _format_message(event: str, obj, fmt: str) -> str:
     return f"[PenTools] {event}: {str(obj)[:200]}"
 
 
-# needed for Q objects in module scope
-from django.db import models
+# LOW-01: removed stale `from django.db import models` that was here at module bottom

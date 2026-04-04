@@ -81,8 +81,13 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # MED-01: XFrameOptionsMiddleware removed — X-Frame-Options is set by Nginx
+    # with `add_header X-Frame-Options "SAMEORIGIN" always;` to avoid duplicate
+    # conflicting headers (Django=DENY vs Nginx=SAMEORIGIN).
 ]
+
+# MED-01: silence Django system-check W002 — intentionally handled by Nginx header
+SILENCED_SYSTEM_CHECKS = ["security.W002"]
 
 ROOT_URLCONF = "pentools.urls"
 
@@ -120,7 +125,18 @@ DATABASES = {
 }
 
 # ─── Caching / Redis ─────────────────────────────────────────────────────
-REDIS_URL = config("REDIS_URL", default="redis://redis:6379/0")
+# MED-03: Each Redis consumer uses a separate DB to prevent key collisions
+# and to protect Celery task messages from Django-cache LRU eviction.
+#   DB 0 — Django cache   (volatile keys, OK to evict under memory pressure)
+#   DB 1 — Celery results (short-lived, auto-expire)
+#   DB 2 — Celery broker  (task messages — must NOT be evicted by cache LRU)
+#   DB 3 — Django Channels (WebSocket layer)
+_redis_password = config("REDIS_PASSWORD", default="")
+_redis_auth     = f":{_redis_password}@" if _redis_password else ""
+
+REDIS_URL       = config("REDIS_URL",         default=f"redis://{_redis_auth}redis:6379/0")
+_broker_default = f"redis://{_redis_auth}redis:6379/2"
+_channel_default = f"redis://{_redis_auth}redis:6379/3"
 
 CACHES = {
     "default": {
@@ -134,7 +150,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL],
+            "hosts": [config("REDIS_CHANNEL_URL", default=_channel_default)],
             "capacity": 1500,
             "expiry": 10,
         },
@@ -142,8 +158,8 @@ CHANNEL_LAYERS = {
 }
 
 # ─── Celery ──────────────────────────────────────────────────────────────
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://redis:6379/0")
-CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default="redis://redis:6379/1")
+CELERY_BROKER_URL      = config("CELERY_BROKER_URL",     default=_broker_default)
+CELERY_RESULT_BACKEND  = config("CELERY_RESULT_BACKEND", default=f"redis://{_redis_auth}redis:6379/1")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -240,7 +256,9 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ─── Notifications ───────────────────────────────────────────────────────
-NOTIFICATION_TELEGRAM_DEFAULT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="")
+# Platform-level Telegram bot token (used by polling task + bot command handler)
+TELEGRAM_BOT_TOKEN                  = config("TELEGRAM_BOT_TOKEN", default="")
+NOTIFICATION_TELEGRAM_DEFAULT_TOKEN = TELEGRAM_BOT_TOKEN
 NOTIFICATION_SLACK_DEFAULT_WEBHOOK  = config("SLACK_WEBHOOK_URL",  default="")
 
 # ─── Reports ─────────────────────────────────────────────────────────────
@@ -248,4 +266,5 @@ REPORTS_MEDIA_DIR = MEDIA_ROOT / "reports"
 
 # ─── OWASP ZAP ───────────────────────────────────────────────────────────
 ZAP_API_URL = config("ZAP_API_URL", default="http://zap:8080")
-ZAP_API_KEY = config("ZAP_API_KEY", default="")
+# Default must match ZAP container: docker-compose uses ${ZAP_API_KEY:-changeme}
+ZAP_API_KEY = config("ZAP_API_KEY", default="changeme")

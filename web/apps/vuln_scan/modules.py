@@ -3,6 +3,7 @@ Vulnerability scanning modules — auto-discovered by ModuleRegistry.
 Sprint 2 Phase 1: Nuclei CVE scan, Misconfiguration scan, Web Templates scan
 """
 from __future__ import annotations
+import re
 import time
 from apps.modules.engine import BaseModule, FieldSchema
 from apps.modules.runner import ToolRunner
@@ -1239,13 +1240,31 @@ class ZAPSpiderModule(_ZAPBaseModule):
     name        = "OWASP ZAP — Web Spider"
     category    = "vuln_scan"
     description = (
-        "Passive web crawl using OWASP ZAP's traditional spider and optional "
-        "Ajax spider.  Discovers URLs, forms, and application structure without "
-        "sending any attack payloads.  Passive analysis of responses is performed "
-        "automatically as pages are fetched."
+        "Pure URL discovery and site-mapping using OWASP ZAP's traditional spider "
+        "and optional Ajax spider. Crawls the target without sending any attack payloads "
+        "and categorises every discovered endpoint by type: admin panels, API routes, "
+        "authentication pages, sensitive file extensions, and static assets. "
+        "Produces a structured site map that can feed directly into ZAP-02 (Passive "
+        "Audit) or ZAP-03 (Active Audit)."
     )
     risk_level  = "low"
-    tags        = ["zap", "owasp", "spider", "crawler", "passive", "recon"]
+    tags        = ["zap", "owasp", "spider", "crawler", "recon", "sitemap"]
+
+    # Patterns to classify discovered URLs into categories
+    _ADMIN_PAT    = re.compile(
+        r"/admin|/manager|/console|/dashboard|/panel|/cpanel|/wp-admin|"
+        r"/phpmyadmin|/myadmin|/webadmin|/backend|/sys/|/manage/", re.I)
+    _API_PAT      = re.compile(
+        r"/api/|/v\d+/|/graphql|/rest/|/swagger|/openapi|/api-docs|"
+        r"\.json$|\.xml$|/rpc|/query", re.I)
+    _AUTH_PAT     = re.compile(
+        r"/login|/signin|/auth|/oauth|/logout|/register|/signup|"
+        r"/reset-password|/forgot|/token|/session", re.I)
+    _SENSITIVE_PAT = re.compile(
+        r"\.(bak|sql|conf|config|env|log|old|txt|git|svn|tar\.gz|"
+        r"zip|rar|7z|pem|key|crt|csr|pfx|p12|dump|backup)$", re.I)
+    _STATIC_PAT   = re.compile(
+        r"\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|mp4|mp3|pdf)$", re.I)
 
     PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
         FieldSchema(
@@ -1260,7 +1279,8 @@ class ZAPSpiderModule(_ZAPBaseModule):
             label="Also run Ajax Spider (JavaScript-rendered pages)",
             field_type="toggle",
             default=False,
-            help_text="Slower but discovers content rendered by JavaScript frameworks.",
+            help_text="Slower but discovers JS-rendered routes and single-page-app content.",
+            group="advanced",
         ),
         FieldSchema(
             key="ajax_spider_mins",
@@ -1269,71 +1289,251 @@ class ZAPSpiderModule(_ZAPBaseModule):
             default=5,
             group="advanced",
         ),
+        FieldSchema(
+            key="include_out_of_scope",
+            label="Report out-of-scope external links",
+            field_type="toggle",
+            default=False,
+            help_text="Create a finding for external hostnames discovered during crawl.",
+            group="advanced",
+        ),
     ]
 
+    def _categorise_urls(self, urls: list[str]) -> dict:
+        import urllib.parse as _up
+        cats: dict[str, list[str]] = {
+            "admin": [], "api": [], "auth": [], "sensitive": [], "static": [], "other": [],
+        }
+        for url in urls:
+            path = _up.urlparse(url).path
+            if self._ADMIN_PAT.search(path):
+                cats["admin"].append(url)
+            elif self._API_PAT.search(url):
+                cats["api"].append(url)
+            elif self._AUTH_PAT.search(path):
+                cats["auth"].append(url)
+            elif self._SENSITIVE_PAT.search(path):
+                cats["sensitive"].append(url)
+            elif self._STATIC_PAT.search(path):
+                cats["static"].append(url)
+            else:
+                cats["other"].append(url)
+        return cats
+
     def execute(self, params: dict, job_id: str, stream) -> dict:
+        import urllib.parse as _up
         client, version = self._get_client(params)
-        target = params["target_url"].strip()
+        target    = params["target_url"].strip()
         max_depth = int(params.get("max_depth", 5))
         use_ajax  = params.get("use_ajax_spider", False)
         ajax_mins = int(params.get("ajax_spider_mins", 5))
+        incl_oos  = params.get("include_out_of_scope", False)
 
         stream("info", f"[ZAP {version}] Starting Web Spider → {target}")
+        stream("info",  "[ZAP] Mode: URL discovery & site mapping — no attack payloads sent")
         client.new_session(f"spider-{job_id[:8]}")
         self._setup_auth(client, params, target)
 
-        # Traditional spider
+        # ── Phase 1: Traditional spider ─────────────────────────────────────
+        phases = "2" if use_ajax else "1"
+        stream("info", f"[ZAP] Phase 1/{phases} — Traditional spider (max depth: {max_depth})…")
         scan_id = client.spider_start(target, max_depth=max_depth)
-        stream("info", f"[ZAP] Traditional spider started (scan ID: {scan_id})")
         client.wait_spider(scan_id, timeout=self.time_limit - 300, stream=stream)
 
-        urls = client.spider_results(scan_id)
-        stream("success", f"[ZAP] Traditional spider found {len(urls)} URLs.")
+        full_res  = client.spider_full_results(scan_id)
+        full_list = full_res.get("fullResults", [])
+        # ZAP returns fullResults as a list of single-key dicts:
+        # [{"urlsInScope": [...]}, {"urlsOutOfScope": [...]}, {"urlsIoError": [...]}]
+        full_data: dict = {}
+        for _item in (full_list if isinstance(full_list, list) else []):
+            if isinstance(_item, dict):
+                full_data.update(_item)
+        in_scope  = full_data.get("urlsInScope", [])
+        out_scope = full_data.get("urlsOutOfScope", [])
+        io_errors = full_data.get("urlsIoError", [])
 
-        # Optional Ajax spider
+        # urlsInScope items are dicts {url, statusCode, method, …};
+        # urlsOutOfScope items are plain strings
+        urls_in  = [u["url"] if isinstance(u, dict) else u for u in in_scope]
+        urls_out = [u if isinstance(u, str) else u.get("url", "") for u in out_scope]
+
+        # Build a set of URLs that returned a real "live" HTTP response.
+        # Treat 4xx/5xx as non-existent so they don't generate false-positive findings
+        # (e.g. robots.txt → 404, .bak → 410).
+        _DEAD_STATUS = {400, 401, 403, 404, 405, 408, 410, 451, 500, 502, 503, 504}
+        live_urls: list[str] = []
+        dead_count = 0
+        for u in in_scope:
+            if isinstance(u, dict):
+                try:
+                    code = int(u.get("statusCode", 0))
+                except (TypeError, ValueError):
+                    code = 0
+                if code in _DEAD_STATUS:
+                    dead_count += 1
+                    continue
+            live_urls.append(u["url"] if isinstance(u, dict) else u)
+
+        stream("success",
+               f"[ZAP] Traditional spider done — "
+               f"{len(urls_in)} in-scope ({dead_count} dead/404 skipped) | "
+               f"{len(urls_out)} out-of-scope | {len(io_errors)} I/O errors")
+
+        # ── Phase 2: Ajax spider (optional) ─────────────────────────────────
+        ajax_new: list[str] = []
         if use_ajax:
-            stream("info", f"[ZAP] Starting Ajax spider (max {ajax_mins} min)…")
+            stream("info", f"[ZAP] Phase 2/2 — Ajax spider (budget: {ajax_mins} min)…")
             client.ajax_spider_start(target)
             deadline = time.time() + ajax_mins * 60
+            last_status = ""
             while time.time() < deadline:
                 status = client.ajax_spider_status()
-                stream("info", f"[ZAP] Ajax spider status: {status}")
+                if status != last_status:
+                    stream("info", f"[ZAP] Ajax spider: {status}")
+                    last_status = status
                 if status == "stopped":
                     break
                 time.sleep(15)
-            ajax_urls = client.ajax_spider_results()
-            stream("success", f"[ZAP] Ajax spider found {len(ajax_urls)} additional URLs.")
-            urls = list(set(urls + ajax_urls))
+            ajax_all  = client.ajax_spider_results()
+            ajax_new  = [u for u in ajax_all if u not in urls_in]
+            urls_in   = list(dict.fromkeys(urls_in + ajax_new))  # deduplicate
+            # Ajax results are plain strings without status codes; treat them as live
+            live_urls = list(dict.fromkeys(live_urls + [u for u in ajax_new if u not in live_urls]))
+            stream("success", f"[ZAP] Ajax spider found {len(ajax_new)} additional JS-rendered URLs.")
 
-        # Wait for passive scan queue to drain
-        stream("info", "[ZAP] Waiting for passive analysis to complete…")
-        client.wait_passive_scan(timeout=300, stream=stream)
+        # ── Categorise & report ──────────────────────────────────────────────
+        # Only categorise URLs that returned a live HTTP response (not 4xx/5xx)
+        cats = self._categorise_urls(live_urls)
+        stream("info",
+               f"[ZAP] Site map breakdown — "
+               f"Admin: {len(cats['admin'])} | API: {len(cats['api'])} | "
+               f"Auth: {len(cats['auth'])} | Sensitive ext: {len(cats['sensitive'])} | "
+               f"Static: {len(cats['static'])} | Other: {len(cats['other'])}")
 
-        # Collect alerts from passive analysis
-        findings = client.alerts_as_findings(target_url=target)
-        stream("success", f"[ZAP] Passive analysis complete — {len(findings)} alerts.")
+        findings: list[dict] = []
 
-        # Add URL-discovery findings (info severity)
-        for url in urls[:500]:  # cap to avoid thousands of info findings
+        # Admin panels → high severity
+        for url in cats["admin"]:
+            path = _up.urlparse(url).path
             findings.append({
-                "title":       f"[ZAP Spider] URL discovered: {url}",
-                "severity":    "info",
+                "title":       f"[ZAP Spider] Admin / Management Interface: {path}",
+                "severity":    "high",
                 "url":         url,
-                "description": f"URL discovered by ZAP spider during crawl of {target}.",
-                "evidence":    url,
-                "remediation": "Review discovered URLs for unintended exposure.",
+                "description": f"An administrative interface was discovered at {url} during the ZAP spider crawl of {target}.",
+                "evidence":    f"Discovered URL: {url}\nPattern matched: admin/management path",
+                "remediation": (
+                    "Restrict admin panels by IP allowlist, enforce strong authentication, "
+                    "add MFA, and audit access logs. Remove if not required."
+                ),
             })
 
+        # Sensitive file extensions → medium severity
+        for url in cats["sensitive"]:
+            ext  = _up.urlparse(url).path.rsplit(".", 1)[-1].lower() if "." in _up.urlparse(url).path else ""
+            path = _up.urlparse(url).path
+            findings.append({
+                "title":       f"[ZAP Spider] Sensitive File Discovered: {path}",
+                "severity":    "medium",
+                "url":         url,
+                "description": (
+                    f"A file with a potentially sensitive extension (.{ext}) was discovered "
+                    f"at {url}. Such files may contain credentials, configuration data, "
+                    "database dumps, or source code."
+                ),
+                "evidence":    f"Discovered URL: {url}\nExtension: .{ext}",
+                "remediation": (
+                    "Remove backup/config files from the web root. "
+                    "Block access via server config if the file must remain. "
+                    "Audit the file content for credential exposure."
+                ),
+            })
+
+        # API endpoints → info
+        for url in cats["api"]:
+            path = _up.urlparse(url).path
+            findings.append({
+                "title":       f"[ZAP Spider] API Endpoint Discovered: {path}",
+                "severity":    "info",
+                "url":         url,
+                "description": f"API endpoint discovered at {url} during spider crawl.",
+                "evidence":    f"Discovered URL: {url}",
+                "remediation": (
+                    "Ensure every API endpoint enforces authentication, authorisation, "
+                    "rate-limiting, and input validation. Consider running ZAP-03 Active "
+                    "Audit against discovered API paths."
+                ),
+            })
+
+        # Auth pages → info
+        for url in cats["auth"]:
+            path = _up.urlparse(url).path
+            findings.append({
+                "title":       f"[ZAP Spider] Authentication Endpoint Discovered: {path}",
+                "severity":    "info",
+                "url":         url,
+                "description": f"An authentication-related page was found at {url}.",
+                "evidence":    f"Discovered URL: {url}",
+                "remediation": (
+                    "Verify brute-force protections (lockout/CAPTCHA/rate-limit), "
+                    "ensure CSRF tokens are present, use secure cookies, "
+                    "and enforce HTTPS."
+                ),
+            })
+
+        # Out-of-scope external links (optional)
+        if incl_oos and urls_out:
+            ext_hosts = list({_up.urlparse(u).netloc for u in urls_out if _up.urlparse(u).netloc})[:20]
+            findings.append({
+                "title":       f"[ZAP Spider] External Links Discovered ({len(urls_out)} URLs → {len(ext_hosts)} hosts)",
+                "severity":    "info",
+                "url":         target,
+                "description": (
+                    f"Spider crawled to {len(urls_out)} out-of-scope URLs referencing "
+                    f"{len(ext_hosts)} external host(s): {', '.join(ext_hosts[:10])}"
+                ),
+                "evidence":    "\n".join(urls_out[:50]),
+                "remediation": "Review external links for open redirect chains or third-party data leakage.",
+            })
+
+        # One summary finding with the full in-scope URL list
+        url_list_text = "\n".join(urls_in[:300])
+        findings.append({
+            "title":       f"[ZAP Spider] Site Map: {len(urls_in)} URLs discovered ({len(live_urls)} live)",
+            "severity":    "info",
+            "url":         target,
+            "description": (
+                f"ZAP spider completed crawl of {target} at max depth {max_depth}. "
+                f"Found {len(urls_in)} in-scope URLs ({len(live_urls)} live, "
+                f"{dead_count} returned 4xx/5xx and were excluded from findings)"
+                + (f", {len(ajax_new)} via Ajax spider" if use_ajax else "") + "."
+            ),
+            "evidence":    url_list_text,
+            "remediation": "Review all discovered endpoints for unintended exposure. "
+                           "Use ZAP-02 for passive analysis or ZAP-03 for active testing.",
+        })
+
         client.remove_replacer_rules()
+
+        sec_count = len([f for f in findings if f["severity"] not in ("info",)])
+        stream("success",
+               f"[ZAP] Spider complete — {len(urls_in)} URLs mapped ({len(live_urls)} live) | "
+               f"{sec_count} security-notable endpoints | "
+               f"Admin: {len(cats['admin'])} | Sensitive: {len(cats['sensitive'])}")
 
         return {
             "status":   "done",
             "findings": findings,
-            "raw_output": f"ZAP Spider complete. URLs: {len(urls)} | Alerts: {len(findings) - len(urls)}",
+            "raw_output": (
+                f"ZAP Spider: {len(urls_in)} in-scope URLs discovered. "
+                f"Admin:{len(cats['admin'])} API:{len(cats['api'])} "
+                f"Auth:{len(cats['auth'])} SensitiveExt:{len(cats['sensitive'])}"
+            ),
             "metadata": {
-                "urls_discovered": len(urls),
-                "subdomains": [],
-                "zap_version": version,
+                "urls_discovered":    len(urls_in),
+                "urls_out_of_scope":  len(urls_out),
+                "categories":         {k: len(v) for k, v in cats.items()},
+                "subdomains":         [],
+                "zap_version":        version,
             },
         }
 
@@ -1345,12 +1545,17 @@ class ZAPPassiveAuditModule(_ZAPBaseModule):
     name        = "OWASP ZAP — Passive Audit"
     category    = "vuln_scan"
     description = (
-        "Spider the target with OWASP ZAP and run a full passive-only audit. "
-        "Detects missing security headers, insecure cookies, information disclosure, "
-        "CSP issues, and more — without sending any attack payloads."
+        "Spider the target then run a full passive-only security audit — "
+        "no attack payloads are ever sent. Analyses HTTP responses in real time "
+        "for missing security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy), "
+        "insecure cookie flags (Secure/HttpOnly/SameSite), information disclosure "
+        "(server banners, stack traces, internal IPs), CORS misconfigurations, "
+        "anti-clickjacking controls, and mixed content. Results are grouped by "
+        "passive scan rule so you can see exactly which rules triggered and how many "
+        "responses were affected."
     )
     risk_level  = "low"
-    tags        = ["zap", "owasp", "passive", "audit", "headers", "cookies", "csp"]
+    tags        = ["zap", "owasp", "passive", "headers", "cookies", "csp", "hsts", "cors"]
 
     PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
         FieldSchema(
@@ -1358,34 +1563,148 @@ class ZAPPassiveAuditModule(_ZAPBaseModule):
             label="Max Crawl Depth",
             field_type="number",
             default=5,
+            help_text="Depth to crawl before starting passive analysis.",
+        ),
+        FieldSchema(
+            key="min_risk",
+            label="Minimum Risk Level to Report",
+            field_type="select",
+            default="0",
+            options=[
+                {"value": "0", "label": "All (including Informational)"},
+                {"value": "1", "label": "Low and above"},
+                {"value": "2", "label": "Medium and above"},
+                {"value": "3", "label": "High only"},
+            ],
+            group="advanced",
         ),
     ]
+
+    # Human-readable category labels for well-known passive rule plugin IDs
+    _RULE_LABELS: dict[int, str] = {
+        10010: "Cookie: Missing Secure Flag",
+        10011: "Cookie: Missing HttpOnly Flag",
+        10012: "Password Autocomplete",
+        10013: "Password in GET",
+        10015: "Incomplete/No Cache-Control Header",
+        10016: "Web Browser XSS Protection Not Enabled",
+        10017: "Cross-Domain JavaScript Source File Inclusion",
+        10019: "Content-Type Header Missing",
+        10020: "Anti-clickjacking Header",
+        10021: "X-Content-Type-Options Header Missing",
+        10023: "Information Disclosure — Debug Error Messages",
+        10024: "Information Disclosure — Sensitive Info in URL",
+        10025: "Information Disclosure — Sensitive Info in HTTP Referrer Header",
+        10027: "Information Disclosure — Suspicious Comments",
+        10028: "Open Redirect",
+        10035: "Strict-Transport-Security Header",
+        10036: "Server Leaks Version Info via Server HTTP Response Header",
+        10038: "Content Security Policy (CSP) Header Not Set",
+        10040: "Secure Pages Include Mixed Content",
+        10049: "Non-Storable Content",
+        10050: "Retrieved from Cache",
+        10054: "Cookie Without SameSite Attribute",
+        10055: "CSP Scanner",
+        10056: "X-Debug-Token Information Leak",
+        10061: "X-AspNet-Version Response Header",
+        10062: "PII Disclosure",
+        10063: "Feature Policy Header Not Set",
+        10094: "Base64 Disclosure",
+        10095: "Backup File Disclosure",
+        10096: "Timestamp Disclosure",
+        10098: "Cross-Domain Misconfiguration (CORS)",
+        10105: "Weak Authentication Method",
+        10108: "Reverse Tabnabbing",
+        10109: "Modern Web Application",
+        10110: "Dangerous JS Functions",
+    }
 
     def execute(self, params: dict, job_id: str, stream) -> dict:
         client, version = self._get_client(params)
         target    = params["target_url"].strip()
         max_depth = int(params.get("max_depth", 5))
+        min_risk  = int(params.get("min_risk", 0))
 
+        risk_labels = {0: "Informational", 1: "Low", 2: "Medium", 3: "High"}
         stream("info", f"[ZAP {version}] Starting Passive Audit → {target}")
+        stream("info",  "[ZAP] Mode: passive-only analysis — no attack payloads will be sent")
+        stream("info",  "[ZAP] Checks: security headers · cookie flags · CSP · HSTS · "
+                        "CORS · info-disclosure · clickjacking · mixed content")
         client.new_session(f"passive-{job_id[:8]}")
         self._setup_auth(client, params, target)
 
-        # Spider to populate ZAP's site map
+        # ── Phase 1: Traditional spider — populates ZAP's response history ──
+        stream("info", "[ZAP] Phase 1/2 — Spidering to collect HTTP responses for analysis…")
         scan_id = client.spider_start(target, max_depth=max_depth)
-        stream("info", f"[ZAP] Spider started (ID: {scan_id})")
         client.wait_spider(scan_id, timeout=self.time_limit - 600, stream=stream)
         urls = client.spider_results(scan_id)
-        stream("success", f"[ZAP] Spider found {len(urls)} URLs. Running passive checks…")
+        stream("success",
+               f"[ZAP] Spider done — {len(urls)} responses queued for passive analysis")
 
-        # Passive scan drains automatically; just wait
-        client.wait_passive_scan(timeout=600, stream=stream)
+        # ── Phase 2: Wait for passive scan queue to drain ────────────────────
+        stream("info", "[ZAP] Phase 2/2 — Running passive analysis rules on all captured responses…")
+        start_t  = time.time()
+        last_rem = None
+        deadline = start_t + 600
+        while time.time() < deadline:
+            remaining = client.passive_scan_records_to_scan()
+            elapsed   = int(time.time() - start_t)
+            if remaining != last_rem:
+                if remaining > 0:
+                    stream("info",
+                           f"[ZAP] Passive queue: {remaining} responses pending ({elapsed}s)…")
+                last_rem = remaining
+            if remaining == 0:
+                break
+            time.sleep(8)
 
-        findings = client.alerts_as_findings(target_url=target)
-        # Only keep passive findings (no attack evidence)
+        total_elapsed = int(time.time() - start_t)
+        stream("info", f"[ZAP] Passive analysis complete ({total_elapsed}s).")
+
+        # ── Collect and filter alerts ────────────────────────────────────────
+        _risk_ord = {"Informational": 0, "Low": 1, "Medium": 2, "High": 3}
+        # Plugin IDs that produce excessive noise without actionable findings
+        _NOISE_IDS = {
+            10104,  # User Agent Fuzzer — fires for every URL per UA variant; not a vulnerability
+        }
+        all_alerts = client.alerts(base_url=target)
+        # Keep only passive-rule alerts (plugin ID < 40000), noise-filtered, min_risk applied
+        passive_alerts = [
+            a for a in all_alerts
+            if client._is_passive_alert(a)
+            and int(a.get("pluginId", 0)) not in _NOISE_IDS
+            and _risk_ord.get(a.get("risk", "Informational"), 0) >= min_risk
+        ]
+
+        stream("info",
+               f"[ZAP] {len(passive_alerts)} passive findings "
+               f"(≥{risk_labels.get(min_risk, 'All')}) — converting to findings…")
+        findings = [client.alert_to_finding(a, target) for a in passive_alerts]
+
+        # ── Rule coverage report ─────────────────────────────────────────────
+        rule_counts: dict[str, int] = {}
+        for a in passive_alerts:
+            pid   = int(a.get("pluginId", 0))
+            label = self._RULE_LABELS.get(pid, a.get("name", f"Rule {pid}"))
+            rule_counts[label] = rule_counts.get(label, 0) + 1
+
+        if rule_counts:
+            top = sorted(rule_counts.items(), key=lambda x: x[1], reverse=True)
+            rules_summary = " | ".join(f"{n}:{c}" for n, c in top[:6])
+            stream("info", f"[ZAP] Rules triggered — {rules_summary}")
+            stream("info",
+                   f"[ZAP] {len(rule_counts)} distinct passive rules found issues "
+                   f"across {len(urls)} responses")
+        else:
+            stream("info", "[ZAP] No passive rule violations found — good baseline security posture.")
+
         summary = client.alerts_summary()
-        stream("success", f"[ZAP] Passive audit done — {len(findings)} alerts. "
-               f"High:{summary.get('High',0)} Med:{summary.get('Medium',0)} "
-               f"Low:{summary.get('Low',0)} Info:{summary.get('Informational',0)}")
+        stream("success",
+               f"[ZAP] Passive audit complete — {len(findings)} findings. "
+               f"High:{summary.get('High',0)} "
+               f"Med:{summary.get('Medium',0)} "
+               f"Low:{summary.get('Low',0)} "
+               f"Info:{summary.get('Informational',0)}")
 
         client.remove_replacer_rules()
 
@@ -1393,13 +1712,16 @@ class ZAPPassiveAuditModule(_ZAPBaseModule):
             "status":   "done",
             "findings": findings,
             "raw_output": (
-                f"ZAP Passive Audit complete. "
-                f"URLs crawled: {len(urls)} | Alerts: {len(findings)}"
+                f"ZAP Passive Audit: {len(urls)} URLs analysed | "
+                f"{len(findings)} passive findings | "
+                f"{len(rule_counts)} distinct rules triggered"
             ),
             "metadata": {
-                "urls_crawled":   len(urls),
-                "alerts_summary": summary,
-                "zap_version":    version,
+                "urls_crawled":    len(urls),
+                "alerts_summary":  summary,
+                "rules_triggered": len(rule_counts),
+                "rule_breakdown":  rule_counts,
+                "zap_version":     version,
             },
         }
 
@@ -1411,14 +1733,15 @@ class ZAPActiveAuditModule(_ZAPBaseModule):
     name        = "OWASP ZAP — Active Audit"
     category    = "vuln_scan"
     description = (
-        "Full active vulnerability scan using OWASP ZAP: spider + active audit. "
-        "Actively tests for SQLi, XSS, SSRF, path traversal, command injection, "
-        "XXE, IDOR, broken auth, and 100+ other vulnerability classes by sending "
-        "attack payloads to the target. "
-        "Only run against targets you own or have explicit written permission to test."
+        "Full three-phase active vulnerability scan: spider → passive analysis → "
+        "active attack. Sends real attack payloads to test for SQLi, XSS, SSRF, "
+        "path traversal, command injection, XXE, open redirect, broken auth, and "
+        "100+ other OWASP vulnerability classes. Findings are labelled as passive "
+        "(observed from response) or active (confirmed via injected payload). "
+        "Only run against targets you own or have explicit written authorisation to test."
     )
     risk_level  = "high"
-    tags        = ["zap", "owasp", "active", "sqli", "xss", "full-scan", "pentest"]
+    tags        = ["zap", "owasp", "active", "sqli", "xss", "ssrf", "full-scan", "pentest"]
 
     PARAMETER_SCHEMA = _ZAPBaseModule._BASE_PARAMS + [
         FieldSchema(
@@ -1433,9 +1756,9 @@ class ZAPActiveAuditModule(_ZAPBaseModule):
             field_type="select",
             default="",
             options=[
-                {"value": "",          "label": "Default (all checks)"},
+                {"value": "",              "label": "Default (all checks)"},
                 {"value": "SQL Injection", "label": "SQL Injection only"},
-                {"value": "XSS",       "label": "XSS only"},
+                {"value": "XSS",           "label": "XSS only"},
             ],
             help_text="Leave as Default to run all active rules.",
             group="advanced",
@@ -1447,6 +1770,17 @@ class ZAPActiveAuditModule(_ZAPBaseModule):
             default=True,
             group="advanced",
         ),
+        FieldSchema(
+            key="thread_count",
+            label="Scanner Threads",
+            field_type="range_slider",
+            default=2,
+            min_value=1,
+            max_value=10,
+            step=1,
+            help_text="Higher = faster but more aggressive. Use 1-2 on fragile targets.",
+            group="advanced",
+        ),
     ]
 
     def execute(self, params: dict, job_id: str, stream) -> dict:
@@ -1454,53 +1788,106 @@ class ZAPActiveAuditModule(_ZAPBaseModule):
         target     = params["target_url"].strip()
         max_depth  = int(params.get("max_depth", 5))
         recurse    = bool(params.get("recurse", True))
+        threads    = int(params.get("thread_count", 2))
 
-        # Only pass scan_policy if it matches a real ZAP policy name.
-        # The "Default" option has value="" — if the frontend sends the label
-        # text instead of the value, normalise it back to empty string.
         _raw_policy = (params.get("scan_policy") or "").strip()
         _KNOWN_POLICIES = {"SQL Injection", "XSS"}
         policy = _raw_policy if _raw_policy in _KNOWN_POLICIES else ""
 
         stream("info", f"[ZAP {version}] Starting Active Audit → {target}")
         stream("warning",
-               "[ZAP] Active scan sends real attack payloads. "
+               "[ZAP] Active scan sends real attack payloads (SQLi, XSS, SSRF, …). "
                "Ensure you have written authorisation for this target.")
 
         client.new_session(f"active-{job_id[:8]}")
         self._setup_auth(client, params, target)
 
-        # Phase 1 — Spider to build site map
-        stream("info", "[ZAP] Phase 1/3 — Spidering target…")
+        # ── Phase 1: Spider ──────────────────────────────────────────────────
+        stream("info", "[ZAP] Phase 1/3 — Spidering target to build site map…")
         scan_id = client.spider_start(target, max_depth=max_depth)
         client.wait_spider(scan_id, timeout=self.time_limit // 3, stream=stream)
         urls = client.spider_results(scan_id)
-        stream("success", f"[ZAP] Spider found {len(urls)} URLs.")
+        stream("success", f"[ZAP] Spider complete — {len(urls)} URLs discovered")
 
-        # Phase 2 — Passive analysis while spider runs
-        stream("info", "[ZAP] Phase 2/3 — Waiting for passive analysis…")
+        # ── Phase 2: Passive analysis ────────────────────────────────────────
+        stream("info", "[ZAP] Phase 2/3 — Passive analysis of captured responses…")
+        passive_start = time.time()
         client.wait_passive_scan(timeout=300, stream=stream)
+        passive_elapsed = int(time.time() - passive_start)
 
-        # Phase 3 — Active scan
-        # Get the actual site URL from ZAP's tree (target may have been redirected)
+        # Count passive alerts before active scan mutates the state
+        passive_count_before = len(client.alerts(base_url=target))
+        stream("info",
+               f"[ZAP] Passive phase done ({passive_elapsed}s) — "
+               f"{passive_count_before} passive issues detected so far")
+
+        # ── Phase 3: Active scan ─────────────────────────────────────────────
         actual_target = client.best_site_for(target)
         if actual_target != target:
-            stream("info", f"[ZAP] Target redirected in site tree → {actual_target}")
-        stream("info", f"[ZAP] Phase 3/3 — Active scan (policy: {policy or 'Default'})…")
-        ascan_id = client.active_scan_start(actual_target, recurse=recurse, policy=policy)
-        stream("info", f"[ZAP] Active scan started (ID: {ascan_id})")
-        client.wait_active_scan(
-            ascan_id,
-            timeout=self.time_limit - 600,
-            stream=stream,
-        )
+            stream("info", f"[ZAP] Canonical target in site tree: {actual_target}")
 
-        findings = client.alerts_as_findings(target_url=target)
-        summary  = client.alerts_summary()
+        policy_label = policy if policy else "Default (all checks)"
+        stream("info",
+               f"[ZAP] Phase 3/3 — Active scan (policy: {policy_label}, "
+               f"threads: {threads}, recurse: {recurse})…")
+        stream("info",
+               "[ZAP] Attack categories: SQL Injection · XSS · Path Traversal · "
+               "Command Injection · SSRF · XXE · Open Redirect · Buffer Overflow · "
+               "Parameter Tampering…")
+
+        ascan_id = client.active_scan_start(actual_target, recurse=recurse, policy=policy)
+        stream("info", f"[ZAP] Active scanner started (scan ID: {ascan_id})")
+        client.wait_active_scan(ascan_id, timeout=self.time_limit - 600, stream=stream)
+
+        # ── Collect all alerts and separate passive from active ──────────────
+        # Plugin IDs that are informational noise and add no security value
+        _NOISE_IDS = {
+            10104,  # User Agent Fuzzer — not a vulnerability finding; fires per URL per UA variant
+        }
+        all_alerts = [
+            a for a in client.alerts(base_url=target)
+            if int(a.get("pluginId", 0)) not in _NOISE_IDS
+        ]
+
+        passive_alerts = [a for a in all_alerts if client._is_passive_alert(a)]
+        active_alerts  = [a for a in all_alerts if not client._is_passive_alert(a)]
+
+        stream("info",
+               f"[ZAP] Alert breakdown — "
+               f"Active (attack-confirmed): {len(active_alerts)} | "
+               f"Passive (response-observed): {len(passive_alerts)}")
+
+        # Convert to findings, labelling each finding source in the title
+        findings: list[dict] = []
+        for a in active_alerts:
+            f = client.alert_to_finding(a, target)
+            # Active findings already have rich evidence (attack payload + response)
+            findings.append(f)
+
+        for a in passive_alerts:
+            f = client.alert_to_finding(a, target)
+            findings.append(f)
+
+        # ── Post-scan statistics ─────────────────────────────────────────────
+        summary = client.alerts_summary()
+
+        # Summarise which active attack categories found issues
+        active_names: dict[str, int] = {}
+        for a in active_alerts:
+            name = a.get("name", "Unknown")
+            active_names[name] = active_names.get(name, 0) + 1
+
+        if active_names:
+            top_active = sorted(active_names.items(), key=lambda x: x[1], reverse=True)[:5]
+            active_summary = " · ".join(f"{n}" for n, _ in top_active)
+            stream("warning", f"[ZAP] Active vulnerabilities confirmed: {active_summary}")
+
         stream("success",
-               f"[ZAP] Active audit done — {len(findings)} alerts. "
-               f"High:{summary.get('High',0)} Med:{summary.get('Medium',0)} "
-               f"Low:{summary.get('Low',0)} Info:{summary.get('Informational',0)}")
+               f"[ZAP] Active audit complete — {len(findings)} total findings. "
+               f"High:{summary.get('High',0)} "
+               f"Med:{summary.get('Medium',0)} "
+               f"Low:{summary.get('Low',0)} "
+               f"Info:{summary.get('Informational',0)}")
 
         client.remove_replacer_rules()
 
@@ -1508,13 +1895,17 @@ class ZAPActiveAuditModule(_ZAPBaseModule):
             "status":   "done",
             "findings": findings,
             "raw_output": (
-                f"ZAP Active Audit complete. "
-                f"URLs crawled: {len(urls)} | Alerts: {len(findings)}"
+                f"ZAP Active Audit: {len(urls)} URLs | "
+                f"Active findings: {len(active_alerts)} | "
+                f"Passive findings: {len(passive_alerts)}"
             ),
             "metadata": {
-                "urls_crawled":   len(urls),
-                "alerts_summary": summary,
-                "zap_version":    version,
+                "urls_crawled":         len(urls),
+                "alerts_summary":       summary,
+                "active_alert_count":   len(active_alerts),
+                "passive_alert_count":  len(passive_alerts),
+                "active_rule_hits":     active_names,
+                "zap_version":          version,
             },
         }
 

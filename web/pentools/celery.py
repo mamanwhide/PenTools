@@ -3,11 +3,14 @@ import os
 from celery import Celery
 from kombu import Queue, Exchange
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.development")
+# MED-02: default to production; override with DJANGO_SETTINGS_MODULE=pentools.settings.development for local dev
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.production")
 
 app = Celery("pentools")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
+# Explicitly discover bot tasks so beat can schedule them before full app load
+app.autodiscover_tasks(["apps.notifications"], related_name="bot_tasks")
 
 # Define all queues explicitly with priorities
 default_exchange = Exchange("default", type="direct")
@@ -29,6 +32,20 @@ app.conf.task_queues = (
 )
 
 app.conf.task_default_queue = "web_audit_queue"
+
+
+# ── Periodic tasks (celery beat) ──────────────────────────────────────────────
+from celery.schedules import crontab  # noqa: E402
+
+app.conf.beat_schedule = {
+    # Poll Telegram bot API for new commands every 3 seconds
+    "telegram-bot-poll": {
+        "task": "notifications.poll_telegram_bot",
+        "schedule": 3.0,  # every 3 seconds
+        "options": {"queue": "notification_queue"},
+    },
+}
+app.conf.timezone = "UTC"
 
 
 @app.task(bind=True)

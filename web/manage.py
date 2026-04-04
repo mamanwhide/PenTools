@@ -6,7 +6,8 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.development")
+    # MED-02: default to production; set DJANGO_SETTINGS_MODULE=pentools.settings.development for local dev
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.production")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

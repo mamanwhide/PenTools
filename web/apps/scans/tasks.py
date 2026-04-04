@@ -26,13 +26,13 @@ class ExecuteModuleTask(Task):
     def stream(self, job_id: str, level: str, message: str):
         """Send one log line to the browser via WebSocket + save to DB."""
         from apps.scans.models import ScanLog
-        ScanLog.objects.create(scan_job_id=job_id, level=level, message=message[:4096])
+        ScanLog.objects.create(scan_job_id=job_id, level=level, message=message[:32768])  # LOW-03: raised from 4096 to 32 KB
         _push_ws(
             f"scan_{job_id}",
             "scan_log",
             {
                 "level": level,
-                "message": message[:4096],
+                "message": message[:32768],  # LOW-03: raised from 4096 to 32 KB
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
@@ -82,7 +82,10 @@ def execute_module(self, job_id: str):
         return
 
     try:
-        params = module.validate_params(job.params)
+        # Decrypt sensitive params (e.g. auth tokens) that were Fernet-encrypted at save time
+        from pentools.crypto import decrypt_sensitive_params
+        plain_params = decrypt_sensitive_params(job.params, module)
+        params = module.validate_params(plain_params)
     except ValueError as e:
         job.status = ScanJob.Status.FAILED
         job.finished_at = dj_tz.now()
@@ -148,6 +151,13 @@ def execute_module(self, job_id: str):
         "duration": duration,
     })
 
+    # Notify bot user if they have a linked Telegram session
+    try:
+        from apps.notifications.bot import notify_user_scan_complete
+        notify_user_scan_complete(job.created_by, job)
+    except Exception:
+        pass  # Never block scan completion due to notification failure
+
     # ── Post-completion hooks ─────────────────────────────────────────────────
     metadata = result.get("metadata", {})
 
@@ -174,6 +184,16 @@ def execute_module(self, job_id: str):
                 "status": job.status,
             },
         )
+
+    # LOW-07: delete per-job temp output files after successful processing
+    try:
+        import shutil
+        from pathlib import Path
+        from apps.modules.runner import SCAN_OUTPUT_DIR
+        job_dir = Path(SCAN_OUTPUT_DIR) / job_id
+        shutil.rmtree(job_dir, ignore_errors=True)
+    except Exception:
+        pass  # Cleanup failure must never affect scan results
 
 
 def _strip_nul(s: str) -> str:
@@ -224,6 +244,16 @@ def _save_findings(job, findings: list[dict]):
         ))
     if objs:
         Finding.objects.bulk_create(objs, ignore_conflicts=True)
+        # LOW-04: alert critical / high findings via notification channels immediately
+        from apps.notifications.dispatcher import dispatch_finding_alert
+        for finding in Finding.objects.filter(
+            scan_job=job,
+            severity__in=["critical", "high"],
+        ).select_related("scan_job__project"):
+            try:
+                dispatch_finding_alert(finding)
+            except Exception:
+                pass  # Notification failure must never break scan results
 
 
 # ─── Diff Report Generator ────────────────────────────────────────────────────
@@ -376,6 +406,21 @@ def _trigger_scan_chains(parent_job, metadata: dict, task_self):
     if not chains.exists():
         return
 
+    # MED-07: Per-user concurrent chain-job quota — prevents a single user from
+    # exhausting the entire worker pool via aggressive chain expansion.
+    _MAX_CHAIN_JOBS_PER_USER = 50
+    running_chain_jobs = ScanJob.objects.filter(
+        created_by=parent_job.created_by,
+        status__in=[ScanJob.Status.PENDING, ScanJob.Status.RUNNING],
+    ).count()
+    if running_chain_jobs >= _MAX_CHAIN_JOBS_PER_USER:
+        task_self.stream(
+            str(parent_job.id), "warning",
+            f"[chain] Per-user concurrent job limit ({_MAX_CHAIN_JOBS_PER_USER}) reached "
+            f"— chain expansion for {parent_job.module_id} skipped.",
+        )
+        return
+
     for chain in chains:
         try:
             mapping = chain.param_mapping or {}
@@ -388,7 +433,11 @@ def _trigger_scan_chains(parent_job, metadata: dict, task_self):
                     continue
                 prefix  = mapping.get("prefix", "")
                 tgt_key = mapping.get("target_param", "target_url")
-                cap     = min(len(items), 50)  # cap at 50 to avoid explosion
+                # MED-07: cap per-chain AND respect remaining per-user budget
+                remaining = _MAX_CHAIN_JOBS_PER_USER - running_chain_jobs
+                cap = min(len(items), 50, max(remaining, 0))  # cap at 50 to avoid explosion
+                if cap == 0:
+                    continue
 
                 task_self.stream(
                     str(parent_job.id), "info",

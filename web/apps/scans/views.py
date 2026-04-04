@@ -65,14 +65,26 @@ def scan_create(request, module_id):
 
         target = None
         project = None
-        if target_id:
-            target = get_object_or_404(Target, id=target_id)
         if project_id:
-            project = get_object_or_404(Project, id=project_id)
+            # HIGH-03: verify the user actually owns or is a member of this project
+            project = get_object_or_404(
+                Project.objects.filter(owner=request.user) | Project.objects.filter(members=request.user),
+                id=project_id,
+            )
+        if target_id:
+            if project:
+                # HIGH-03/MED-06: target must belong to the resolved project
+                target = get_object_or_404(Target, id=target_id, project=project)
+            else:
+                target = get_object_or_404(Target, id=target_id)
+
+        # Encrypt fields marked sensitive=True in the module schema before DB insert
+        from pentools.crypto import encrypt_sensitive_params
+        encrypted_params = encrypt_sensitive_params(raw_params, module)
 
         job = ScanJob.objects.create(
             module_id=module.id,
-            params=raw_params,
+            params=encrypted_params,
             created_by=request.user,
             target=target,
             project=project,
@@ -118,8 +130,8 @@ def scan_detail(request, job_id):
     """Live scan view with WebSocket log stream."""
     job = get_object_or_404(ScanJob, id=job_id)
 
-    # Only owner or admin can access
-    if job.created_by != request.user and not request.user.is_staff:
+    # Only owner or admin can access (HIGH-08: use custom role, not Django is_staff)
+    if job.created_by != request.user and not request.user.is_admin_role:
         raise Http404()
 
     recent_logs = ScanLog.objects.filter(scan_job=job).order_by("-id")[:200]
@@ -347,9 +359,9 @@ def diff_detail(request, diff_id):
         user_projects = (
             Project.objects.filter(members=request.user) | Project.objects.filter(owner=request.user)
         ).distinct()
-        if diff.project not in user_projects and not request.user.is_staff:
+        if diff.project not in user_projects and not request.user.is_admin_role:
             raise Http404()
-    elif not request.user.is_staff:
+    elif not request.user.is_admin_role:
         raise Http404()
 
     return render(request, "scans/diff_detail.html", {"diff": diff})

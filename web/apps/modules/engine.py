@@ -206,7 +206,13 @@ class ModuleRegistry:
     """
 
     _instance: "ModuleRegistry | None" = None
-    _modules: dict[str, BaseModule] = {}
+    # MED-09: _modules must be an instance-level attribute, not class-level.
+    # Class-level dicts are shared across all instances and persist across
+    # _instance resets (e.g. in tests), causing ghost registrations.
+    # Initialised in __init__ so each fresh instance starts with an empty registry.
+
+    def __init__(self):
+        self._modules: dict[str, "BaseModule"] = {}  # MED-09: instance-level
 
     @classmethod
     def instance(cls) -> "ModuleRegistry":
@@ -214,6 +220,11 @@ class ModuleRegistry:
             cls._instance = cls()
             cls._instance._discover()
         return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset singleton — use in test tearDown to avoid ghost registrations."""
+        cls._instance = None
 
     def _discover(self):
         """Auto-discover all modules.py files under apps/."""

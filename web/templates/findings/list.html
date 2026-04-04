@@ -72,9 +72,18 @@
     <input type="checkbox" name="manual" value="1" {% if filters.manual == "1" %}checked{% endif %} class="rounded border-surface-border">
     Manual only
   </label>
+  {% if filters.job %}<input type="hidden" name="job" value="{{ filters.job }}">{% endif %}
   <button type="submit" class="px-3 py-1.5 bg-accent text-white rounded text-sm">Filter</button>
   <a href="{% url 'finding_list' %}" class="px-3 py-1.5 border border-surface-border text-gray-400 rounded text-sm">Clear</a>
 </form>
+
+{% if filters.job %}
+<div class="mb-4 px-3 py-2 bg-sky-900/20 border border-sky-800/30 rounded text-xs text-sky-400 flex items-center gap-2">
+  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01"/><circle cx="12" cy="12" r="10"/></svg>
+  Showing findings from scan <span class="font-mono">{{ filters.job }}</span> &mdash;
+  <a href="{% url 'finding_list' %}" class="underline hover:text-sky-300">Show all findings</a>
+</div>
+{% endif %}
 
 {# ── Table ── #}
 <div class="bg-surface-card border border-surface-border rounded overflow-hidden">

@@ -4,7 +4,8 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.development")
+# MED-02: default to production; override with DJANGO_SETTINGS_MODULE=pentools.settings.development for local dev
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pentools.settings.production")
 
 # Initialize Django ASGI early to populate app registry
 django_asgi_app = get_asgi_application()

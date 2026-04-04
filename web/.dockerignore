@@ -1,0 +1,27 @@
+# MED-05: Exclude backup files and dev artifacts from Docker image.
+# Backup files may contain old code with known vulnerabilities.
+*.bak
+*.orig
+*.swp
+*.swo
+*~
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+**/__tests__/
+
+# Local env overrides
+.env
+.env.local
+.env.*.local
+
+# Editor metadata
+.vscode/
+.idea/

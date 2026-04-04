@@ -169,3 +169,14 @@ class ToolRunner:
         job_dir = Path(SCAN_OUTPUT_DIR) / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         return job_dir / f"{self.tool_name}_output.{ext}"
+
+    def cleanup_output(self, job_id: str) -> None:
+        """LOW-07: Delete per-job output directory after findings have been parsed.
+
+        Called by BaseModule.execute() after _save_findings(). Prevents /tmp/pentools
+        from filling up over thousands of scans and crashing subsequent runs.
+        """
+        import shutil
+        job_dir = Path(SCAN_OUTPUT_DIR) / job_id
+        if job_dir.exists():
+            shutil.rmtree(job_dir, ignore_errors=True)
